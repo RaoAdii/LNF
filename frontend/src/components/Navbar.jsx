@@ -50,14 +50,42 @@ const Navbar = () => {
       >
         <div className="container-lg h-full flex items-center justify-between px-6">
           {/* Logo */}
-          <Link
-            to="/"
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-          >
-            <div className="w-6 h-6 bg-ink-primary rounded-sm" />
-            <span className="font-syne font-bold text-lg text-ink-primary hidden sm:block">
-              L&F
-            </span>
+          <Link to="/" className="flex items-center">
+            <svg width="180" height="44" viewBox="0 0 180 44" 
+                 xmlns="http://www.w3.org/2000/svg">
+              
+              {/* Badge */}
+              <rect x="0" y="5" width="34" height="34" rx="10" fill="#ffffff"/>
+              
+              {/* Magnifying glass circle */}
+              <circle cx="14" cy="19" r="5.5" fill="none" stroke="#0f0f12" 
+                      strokeWidth="2" strokeLinecap="round"/>
+              
+              {/* Magnifying glass handle */}
+              <line x1="18.5" y1="23.5" x2="22" y2="27" stroke="#0f0f12" 
+                    strokeWidth="2" strokeLinecap="round"/>
+              
+              {/* Ghost diagonal line */}
+              <line x1="22" y1="13" x2="28" y2="31" stroke="#0f0f12" 
+                    strokeWidth="1.6" strokeLinecap="round" opacity="0.15"/>
+              
+              {/* F letter */}
+              <text x="24" y="30" fontFamily="Arial" fontWeight="900" 
+                    fontSize="10" fill="#0f0f12">F</text>
+              
+              {/* LNF wordmark */}
+              <text x="44" y="21" fontFamily="'Syne', sans-serif" 
+                    fontWeight="800" fontSize="18" fill="#ffffff" 
+                    letterSpacing="-0.8">LNF</text>
+              
+              {/* Subtitle */}
+              <text x="44" y="36" fontFamily="'DM Sans', sans-serif" 
+                    fontWeight="300" fontSize="9" 
+                    fill="rgba(255,255,255,0.38)" letterSpacing="2.5">
+                LOST &amp; FOUND HUB
+              </text>
+              
+            </svg>
           </Link>
 
           {/* Desktop Navigation */}
