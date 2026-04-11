@@ -64,9 +64,29 @@ const Login = () => {
         >
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="w-12 h-12 bg-accent rounded-lg mx-auto mb-4 flex items-center justify-center text-white text-xl font-bold">
-              L&F
-            </div>
+            <svg width="44" height="44" viewBox="0 0 44 44" 
+                 xmlns="http://www.w3.org/2000/svg" className="mx-auto mb-4">
+              
+              {/* Badge */}
+              <rect width="44" height="44" rx="10" fill="#ffffff"/>
+              
+              {/* Magnifying glass circle */}
+              <circle cx="16" cy="18" r="6" fill="none" stroke="#0f0f12" 
+                      strokeWidth="2.2" strokeLinecap="round"/>
+              
+              {/* Magnifying glass handle */}
+              <line x1="21" y1="23" x2="26" y2="28" stroke="#0f0f12" 
+                    strokeWidth="2.2" strokeLinecap="round"/>
+              
+              {/* Ghost diagonal line */}
+              <line x1="26" y1="12" x2="32" y2="34" stroke="#0f0f12" 
+                    strokeWidth="1.5" strokeLinecap="round" opacity="0.15"/>
+              
+              {/* F letter */}
+              <text x="28" y="33" fontFamily="Arial" fontWeight="900" 
+                    fontSize="11" fill="#0f0f12">F</text>
+              
+            </svg>
             <h1 className="text-2xl font-syne font-bold text-ink-primary mb-2">
               Welcome Back
             </h1>
