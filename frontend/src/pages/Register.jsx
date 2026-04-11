@@ -41,6 +41,7 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [focused, setFocused] = useState({});
 
   const formik = useFormik({
     initialValues: {
@@ -117,8 +118,10 @@ const Register = () => {
               <input
                 type="text"
                 name="name"
-                placeholder="John Doe"
+                placeholder={focused.name || formik.values.name ? "John Doe" : ""}
                 className="input"
+                onFocus={() => setFocused(prev => ({ ...prev, name: true }))}
+                onBlur={() => setFocused(prev => ({ ...prev, name: false }))}
                 {...formik.getFieldProps('name')}
               />
               <label className="input-label">Full Name</label>
@@ -132,8 +135,10 @@ const Register = () => {
               <input
                 type="email"
                 name="email"
-                placeholder="your@email.com"
+                placeholder={focused.email || formik.values.email ? "your@email.com" : ""}
                 className="input"
+                onFocus={() => setFocused(prev => ({ ...prev, email: true }))}
+                onBlur={() => setFocused(prev => ({ ...prev, email: false }))}
                 {...formik.getFieldProps('email')}
               />
               <label className="input-label">Email Address</label>
@@ -148,8 +153,10 @@ const Register = () => {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   name="password"
-                  placeholder="••••••••"
-                  className="input pr-10"
+                  placeholder={focused.password || formik.values.password ? "••••••••" : ""}
+                  className="input pr-10 py-3"
+                  onFocus={() => setFocused(prev => ({ ...prev, password: true }))}
+                  onBlur={() => setFocused(prev => ({ ...prev, password: false }))}
                   {...formik.getFieldProps('password')}
                 />
                 <button
@@ -159,10 +166,10 @@ const Register = () => {
                 >
                   {showPassword ? '👁️' : '👁️‍🗨️'}
                 </button>
+                <label className="input-label">Password</label>
               </div>
-              <label className="input-label">Password</label>
               {formik.values.password && (
-                <div className="mt-2 flex items-center gap-2">
+                <div className="mt-3 flex items-center gap-2">
                   <div className="flex-1 h-1 bg-gray-200 rounded-full overflow-hidden">
                     <motion.div
                       className={`h-full ${getStrengthColor()}`}
@@ -177,7 +184,7 @@ const Register = () => {
                 </div>
               )}
               {formik.touched.password && formik.errors.password && (
-                <p className="text-lost-color text-xs mt-1">{formik.errors.password}</p>
+                <p className="text-lost-color text-xs mt-2">{formik.errors.password}</p>
               )}
             </div>
 
@@ -187,8 +194,10 @@ const Register = () => {
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}
                   name="confirmPassword"
-                  placeholder="••••••••"
-                  className="input pr-10"
+                  placeholder={focused.confirmPassword || formik.values.confirmPassword ? "••••••••" : ""}
+                  className="input pr-10 py-3"
+                  onFocus={() => setFocused(prev => ({ ...prev, confirmPassword: true }))}
+                  onBlur={() => setFocused(prev => ({ ...prev, confirmPassword: false }))}
                   {...formik.getFieldProps('confirmPassword')}
                 />
                 <button
@@ -198,10 +207,10 @@ const Register = () => {
                 >
                   {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
                 </button>
+                <label className="input-label">Confirm Password</label>
               </div>
-              <label className="input-label">Confirm Password</label>
               {formik.touched.confirmPassword && formik.errors.confirmPassword && (
-                <p className="text-lost-color text-xs mt-1">{formik.errors.confirmPassword}</p>
+                <p className="text-lost-color text-xs mt-2">{formik.errors.confirmPassword}</p>
               )}
             </div>
 

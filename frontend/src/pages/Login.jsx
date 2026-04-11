@@ -25,6 +25,7 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [focused, setFocused] = useState({});
 
   const from = location.state?.from?.pathname || '/';
 
@@ -81,8 +82,10 @@ const Login = () => {
               <input
                 type="email"
                 name="email"
-                placeholder="your@email.com"
+                placeholder={focused.email || formik.values.email ? "your@email.com" : ""}
                 className="input"
+                onFocus={() => setFocused(prev => ({ ...prev, email: true }))}
+                onBlur={() => setFocused(prev => ({ ...prev, email: false }))}
                 {...formik.getFieldProps('email')}
               />
               <label className="input-label">Email Address</label>
@@ -97,8 +100,10 @@ const Login = () => {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   name="password"
-                  placeholder="••••••••"
-                  className="input pr-10"
+                  placeholder={focused.password || formik.values.password ? "••••••••" : ""}
+                  className="input pr-10 py-3"
+                  onFocus={() => setFocused(prev => ({ ...prev, password: true }))}
+                  onBlur={() => setFocused(prev => ({ ...prev, password: false }))}
                   {...formik.getFieldProps('password')}
                 />
                 <button
@@ -108,10 +113,10 @@ const Login = () => {
                 >
                   {showPassword ? '👁️' : '👁️‍🗨️'}
                 </button>
+                <label className="input-label">Password</label>
               </div>
-              <label className="input-label">Password</label>
               {formik.touched.password && formik.errors.password && (
-                <p className="text-lost-color text-xs mt-1">{formik.errors.password}</p>
+                <p className="text-lost-color text-xs mt-2">{formik.errors.password}</p>
               )}
             </div>
 
