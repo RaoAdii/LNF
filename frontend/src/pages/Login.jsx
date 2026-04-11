@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { motion } from 'framer-motion';
@@ -20,10 +20,13 @@ const validationSchema = Yup.object().shape({
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useContext(AuthContext);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [hasError, setHasError] = useState(false);
+
+  const from = location.state?.from?.pathname || '/';
 
   const formik = useFormik({
     initialValues: {
@@ -38,7 +41,7 @@ const Login = () => {
         const response = await authAPI.login(values);
         login(response.data.user, response.data.token);
         toast.success('Login successful!');
-        navigate('/');
+        navigate(from, { replace: true });
       } catch (error) {
         setHasError(true);
         toast.error(error.response?.data?.message || 'Login failed');

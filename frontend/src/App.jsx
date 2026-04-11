@@ -17,6 +17,7 @@ import CreatePost from './pages/CreatePost';
 import EditPost from './pages/EditPost';
 import PostDetail from './pages/PostDetail';
 import Messages from './pages/Messages';
+import NotFound from './pages/NotFound';
 
 // Ambient orbs component
 const AmbientOrbs = () => (
@@ -115,6 +116,9 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+
+              {/* 404 Not Found */}
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </AnimatePresence>
 

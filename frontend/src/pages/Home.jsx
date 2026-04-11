@@ -45,6 +45,10 @@ const Home = () => {
     setSearchParams({ ...searchParams, category });
   };
 
+  const clearFilters = () => {
+    setSearchParams({ q: '', type: '', category: '' });
+  };
+
   return (
     <PageWrapper>
       <div className="container-lg px-6 py-12">
@@ -75,18 +79,24 @@ const Home = () => {
           <SkeletonGrid count={6} />
         ) : posts.length === 0 ? (
           <motion.div
-            className="text-center py-16"
+            className="text-center py-20"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
           >
-            <div className="text-6xl mb-4">📭</div>
-            <h2 className="text-2xl font-syne font-bold text-ink-primary mb-2">
-              No items found
-            </h2>
-            <p className="text-ink-secondary">
-              Try adjusting your search filters or check back later
+            <div className="text-6xl mb-4">🔍</div>
+            <h3 className="text-xl font-semibold text-ink-primary mb-2">
+              No results found
+            </h3>
+            <p className="text-ink-muted mb-6">
+              Try different keywords or clear your filters.
             </p>
+            <button 
+              onClick={clearFilters} 
+              className="btn btn-secondary"
+            >
+              Clear Filters
+            </button>
           </motion.div>
         ) : (
           <motion.div

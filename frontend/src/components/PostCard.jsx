@@ -1,12 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { API_BASE_URL } from '../services/api';
 
 const PostCard = ({ post }) => {
   const isLost = post.type === 'lost';
   const imageUrl = post.imageUrl
-    ? `http://localhost:5000${post.imageUrl}`
-    : 'https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?w=400&h=300&fit=crop';
+    ? `${API_BASE_URL}/uploads/${post.imageUrl}`
+    : '/placeholder.svg';
 
   const getStatusColor = () => {
     if (post.status === 'resolved') return 'badge-found';
@@ -36,6 +37,10 @@ const PostCard = ({ post }) => {
             src={imageUrl}
             alt={post.title}
             className="w-full h-full object-cover"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = '/placeholder.svg';
+            }}
             whileHover={{ scale: 1.04 }}
             transition={{ duration: 0.4, ease: 'easeOut' }}
           />

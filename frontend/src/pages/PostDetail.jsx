@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { postAPI } from '../services/api';
+import { motion, AnimatePresence } from 'framer-motion';
+import { postAPI, API_BASE_URL } from '../services/api';
 import { toast } from 'react-toastify';
 import PageWrapper from '../components/PageWrapper';
 import MessageBox from '../components/MessageBox';
+import ConfirmModal from '../components/ConfirmModal';
 import { SkeletonCard, SkeletonText } from '../components/Skeleton';
 import { AuthContext } from '../context/AuthContext';
 
@@ -15,6 +16,7 @@ const PostDetail = () => {
   const [post, setPost] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showMessageForm, setShowMessageForm] = useState(false);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
 
   useEffect(() => {
     fetchPost();
@@ -29,6 +31,16 @@ const PostDetail = () => {
       navigate('/');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await postAPI.deletePost(id);
+      toast.success('Post deleted successfully');
+      navigate('/my-posts');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to delete post');
     }
   };
 
@@ -53,11 +65,13 @@ const PostDetail = () => {
     );
   }
 
-  const isOwner = user && post.createdBy?._id === user?.id;
+  const isOwner = user && post.createdBy && 
+    (user._id === post.createdBy._id || user._id === post.createdBy);
+  const canContact = user && !isOwner;
   const isLost = post.type === 'lost';
   const imageUrl = post.imageUrl
-    ? `http://localhost:5000${post.imageUrl}`
-    : 'https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?w=600&h=500&fit=crop';
+    ? `${API_BASE_URL}/uploads/${post.imageUrl}`
+    : '/placeholder.svg';
 
   return (
     <PageWrapper>
@@ -87,6 +101,10 @@ const PostDetail = () => {
                   src={imageUrl}
                   alt={post.title}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = '/placeholder.svg';
+                  }}
                   whileHover={{ scale: 1.04 }}
                   transition={{ duration: 0.4 }}
                 />
@@ -147,22 +165,22 @@ const PostDetail = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.2 }}
           >
-            {!isOwner && (
+            {!user && (
+              <Link to="/login" className="btn btn-secondary w-full text-center">
+                Login to Contact Owner
+              </Link>
+            )}
+
+            {canContact && (
               <>
-                {isAuthenticated ? (
-                  <motion.button
-                    onClick={() => setShowMessageForm(!showMessageForm)}
-                    className="btn btn-primary w-full"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.97 }}
-                  >
-                    📬 Contact Owner
-                  </motion.button>
-                ) : (
-                  <Link to="/login" className="btn btn-accent w-full text-center">
-                    Login to Contact
-                  </Link>
-                )}
+                <motion.button
+                  onClick={() => setShowMessageForm(!showMessageForm)}
+                  className="btn btn-primary w-full"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                >
+                  📬 Contact Owner
+                </motion.button>
 
                 {/* Message Form */}
                 <AnimatePresence>
@@ -191,21 +209,33 @@ const PostDetail = () => {
             )}
 
             {isOwner && (
-              <div className="space-y-2">
+              <div className="flex gap-3">
                 <Link
                   to={`/edit-post/${post._id}`}
-                  className="btn btn-secondary w-full text-center"
+                  className="flex-1"
                 >
-                  ✏️ Edit Post
+                  <button className="btn btn-secondary w-full">Edit Post</button>
                 </Link>
                 <button
-                  onClick={() => handleDelete(post._id)}
-                  className="btn btn-danger w-full"
+                  onClick={() => setShowConfirmDelete(true)}
+                  className="btn btn-danger flex-1"
                 >
-                  🗑️ Delete Post
+                  Delete
                 </button>
               </div>
             )}
+
+            {/* Delete Confirmation Modal */}
+            <ConfirmModal
+              isOpen={showConfirmDelete}
+              title="Delete Post"
+              message="Are you sure you want to delete this post? This action cannot be undone."
+              onConfirm={handleDelete}
+              onCancel={() => setShowConfirmDelete(false)}
+              confirmText="Delete"
+              cancelText="Cancel"
+              isDangerous={true}
+            />
           </motion.div>
         </div>
       </div>

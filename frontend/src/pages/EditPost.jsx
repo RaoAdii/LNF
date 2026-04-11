@@ -4,7 +4,7 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-toastify';
-import { postAPI } from '../services/api';
+import { postAPI, API_BASE_URL } from '../services/api';
 import PageWrapper from '../components/PageWrapper';
 import FloatingLabelInput from '../components/FloatingLabelInput';
 
@@ -64,7 +64,12 @@ const EditPost = () => {
         toast.success('Post updated successfully!');
         navigate('/my-posts');
       } catch (error) {
-        toast.error(error.response?.data?.message || 'Failed to update post');
+        if (error.response?.status === 403) {
+          toast.error('You are not authorized to edit this post');
+          navigate('/my-posts');
+        } else {
+          toast.error(error.response?.data?.message || 'Failed to update post');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -88,11 +93,16 @@ const EditPost = () => {
         image: null,
       });
       if (post.imageUrl) {
-        setCurrentImageUrl(`http://localhost:5000${post.imageUrl}`);
+        setCurrentImageUrl(`${API_BASE_URL}/uploads/${post.imageUrl}`);
       }
     } catch (error) {
-      toast.error('Failed to load post');
-      navigate('/my-posts');
+      if (error.response?.status === 403) {
+        toast.error('You are not authorized to edit this post');
+        navigate('/my-posts');
+      } else {
+        toast.error('Failed to load post');
+        navigate('/my-posts');
+      }
     } finally {
       setIsPageLoading(false);
     }

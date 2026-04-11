@@ -85,16 +85,19 @@ const Dashboard = () => {
           <SkeletonPostList count={3} />
         ) : posts.length === 0 ? (
           <motion.div
-            className="text-center py-16 card card-glass"
+            className="text-center py-20"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
           >
             <div className="text-6xl mb-4">📭</div>
-            <h2 className="text-2xl font-syne font-bold text-ink-primary mb-4">
+            <h3 className="text-xl font-semibold text-ink-primary mb-2">
               No posts yet
-            </h2>
-            <Link to="/create-post" className="btn btn-primary inline-block">
-              Create Your First Post
+            </h3>
+            <p className="text-ink-muted mb-6">
+              You haven't posted any lost or found items yet.
+            </p>
+            <Link to="/create-post">
+              <button className="btn btn-primary">Post Your First Item</button>
             </Link>
           </motion.div>
         ) : (
