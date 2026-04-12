@@ -65,4 +65,16 @@ export const messageAPI = {
   getSentMessages: () => api.get('/messages/sent'),
 };
 
+export const getConversations = () =>
+  api.get('/messages/conversations');
+
+export const getThread = (otherUserId, postId) =>
+  api.get(`/messages/thread/${otherUserId}/${postId}`);
+
+export const replyMessage = (data) =>
+  api.post('/messages/reply', data);
+
+export const markThreadAsRead = (otherUserId, postId) =>
+  api.put(`/messages/read/${otherUserId}/${postId}`);
+
 export default api;
