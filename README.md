@@ -1,412 +1,208 @@
-# Lost & Found Hub for Housing Societies
+# LNF - Lost and Found Hub
 
-A complete, production-ready MERN web application where housing society residents can post lost or found items with images, search posts, and message other residents securely.
+LNF is a MERN application built for residential communities to report lost/found items, connect owners with finders, and continue communication through threaded in-app messaging.
 
-## Features
+This repository is maintained as a practical, deployment-ready codebase with clear separation between API, UI, and operational documentation.
 
-✅ **User Authentication** - JWT-based registration and login with secure password hashing
-✅ **Post Management** - Full CRUD operations for lost/found items
-✅ **Image Upload** - Upload and display images with Multer
-✅ **Search & Filter** - Filter by keyword, type (lost/found), and category
-✅ **Messaging System** - Secure peer-to-peer messaging between residents about specific posts
-✅ **Responsive UI** - Mobile-friendly design with Tailwind CSS
-✅ **Error Handling** - Comprehensive error handling on both frontend and backend
-✅ **Loading States** - User-friendly loading indicators
-✅ **Toast Notifications** - Real-time feedback on all actions
+## What The App Solves
 
-## Tech Stack
+- Residents can post lost or found items with photos.
+- Community members can search by keyword, type, and category.
+- Post owners can manage lifecycle states (open/resolved) and edits.
+- Users can contact each other about a specific post and continue the conversation in a chat thread.
+
+## Current Stack
 
 ### Backend
-- **Node.js** - JavaScript runtime
-- **Express.js** - Web framework
-- **MongoDB** - NoSQL database
-- **Mongoose** - ODM for MongoDB
-- **JWT** - Authentication
-- **bcryptjs** - Password hashing
-- **Multer** - File upload handling
-- **express-validator** - Request validation
+- Node.js + Express
+- MongoDB + Mongoose
+- JWT auth + bcrypt password hashing
+- Multer image uploads
+- express-validator request validation
 
 ### Frontend
-- **React.js** - UI library
-- **Vite** - Build tool and dev server
-- **React Router DOM** - Client-side routing
-- **Axios** - HTTP client
-- **Tailwind CSS** - Utility-first CSS framework
-- **Formik + Yup** - Form validation
-- **React Toastify** - Notifications
+- React 18 + Vite
+- React Router 6
+- Axios with auth interceptors
+- Formik + Yup forms/validation
+- Tailwind CSS + custom token-based design system
+- Framer Motion transitions and interaction animations
 
-## Folder Structure
+## Core Capabilities
 
-```
-backend/
-├── config/
-│   └── db.js
-├── controllers/
-│   ├── authController.js
-│   ├── postController.js
-│   └── messageController.js
-├── middleware/
-│   ├── authMiddleware.js
-│   └── uploadMiddleware.js
-├── models/
-│   ├── User.js
-│   ├── Post.js
-│   └── Message.js
-├── routes/
-│   ├── authRoutes.js
-│   ├── postRoutes.js
-│   └── messageRoutes.js
-├── uploads/
-├── .env
-├── server.js
-└── package.json
+- Authentication: register/login/profile with protected routes
+- Posts: create, read, update, delete, mark resolved
+- Uploads: image storage and static file serving
+- Search/filter: live query across post fields
+- Messaging:
+  - conversation list grouped by user + post
+  - full thread view
+  - reply inside thread
+  - unread tracking
+  - polling refresh every 3 seconds
 
-frontend/
-├── src/
-│   ├── components/
-│   │   ├── Navbar.jsx
-│   │   ├── PostCard.jsx
-│   │   ├── SearchBar.jsx
-│   │   └── MessageBox.jsx
-│   ├── pages/
-│   │   ├── Home.jsx
-│   │   ├── Login.jsx
-│   │   ├── Register.jsx
-│   │   ├── Dashboard.jsx
-│   │   ├── CreatePost.jsx
-│   │   ├── EditPost.jsx
-│   │   ├── PostDetail.jsx
-│   │   └── Messages.jsx
-│   ├── services/
-│   │   └── api.js
-│   ├── context/
-│   │   └── AuthContext.jsx
-│   ├── routes/
-│   │   └── ProtectedRoute.jsx
-│   ├── App.jsx
-│   ├── main.jsx
-│   └── index.css
-├── vite.config.js
-├── tailwind.config.js
-├── postcss.config.js
-├── package.json
-└── index.html
-```
-
-## Installation & Setup
+## Local Development
 
 ### Prerequisites
-- Node.js (v14 or higher)
-- npm or yarn
-- MongoDB Atlas account (or local MongoDB)
+- Node.js 18+ recommended
+- npm 9+
+- MongoDB Atlas (or local MongoDB)
 
-### Backend Setup
+### 1) Backend
 
-1. **Navigate to backend directory:**
-   ```bash
-   cd backend
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-3. **Configure environment variables:**
-   - Edit `.env` file and add:
-   ```
-   PORT=5000
-   MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/lost-found-hub?retryWrites=true&w=majority
-   JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
-   JWT_EXPIRES_IN=7d
-   NODE_ENV=development
-   ```
-
-4. **Start the backend server:**
-   ```bash
-   npm run dev
-   ```
-   The server will run on `http://localhost:5000`
-
-### Frontend Setup
-
-1. **In a new terminal, navigate to frontend directory:**
-   ```bash
-   cd frontend
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-3. **Start the development server:**
-   ```bash
-   npm run dev
-   ```
-   The frontend will run on `http://localhost:5173`
-
-## API Documentation
-
-### Authentication Routes (`/api/auth`)
-
-**Register User**
-```
-POST /api/auth/register
-Content-Type: application/json
-
-{
-  "name": "John Doe",
-  "email": "john@example.com",
-  "password": "password123",
-  "confirmPassword": "password123"
-}
+```bash
+cd backend
+npm install
+npm run dev
 ```
 
-**Login User**
-```
-POST /api/auth/login
-Content-Type: application/json
+Backend default URL: http://localhost:5000
 
-{
-  "email": "john@example.com",
-  "password": "password123"
-}
-```
+### 2) Frontend
 
-**Get Profile (Protected)**
-```
-GET /api/auth/profile
-Authorization: Bearer <token>
+```bash
+cd frontend
+npm install
+npm run dev
 ```
 
-### Post Routes (`/api/posts`)
+Frontend default URL: http://localhost:5173
 
-**Get All Posts**
-```
-GET /api/posts
-GET /api/posts?q=search_keyword
-GET /api/posts?type=lost
-GET /api/posts?type=found
-GET /api/posts?category=Keys
-```
+## Environment Variables
 
-**Get Single Post**
-```
-GET /api/posts/:id
-```
+Create backend `.env`:
 
-**Get My Posts (Protected)**
-```
-GET /api/posts/my-posts
-Authorization: Bearer <token>
+```env
+PORT=5000
+MONGO_URI=your_mongodb_connection_string
+JWT_SECRET=replace_with_a_long_random_secret
+JWT_EXPIRES_IN=7d
+NODE_ENV=development
+FRONTEND_URL=http://localhost:5173
 ```
 
-**Create Post (Protected)**
-```
-POST /api/posts
-Authorization: Bearer <token>
-Content-Type: multipart/form-data
+Optional frontend `.env`:
 
-{
-  "type": "lost",
-  "title": "Lost Black Wallet",
-  "description": "Lost near parking area",
-  "location": "Block C",
-  "category": "Wallet",
-  "image": <file>
-}
+```env
+VITE_API_URL=http://localhost:5000
 ```
 
-**Update Post (Protected)**
-```
-PUT /api/posts/:id
-Authorization: Bearer <token>
-Content-Type: multipart/form-data
+## API Surface (High Level)
 
-{
-  "type": "lost",
-  "title": "Updated Title",
-  "description": "Updated description",
-  "location": "Updated location",
-  "category": "Wallet",
-  "status": "resolved",
-  "image": <file> (optional)
-}
-```
+### Auth
+- POST /api/auth/register
+- POST /api/auth/login
+- GET /api/auth/profile
 
-**Delete Post (Protected)**
-```
-DELETE /api/posts/:id
-Authorization: Bearer <token>
-```
+### Posts
+- GET /api/posts
+- GET /api/posts/:id
+- GET /api/posts/my-posts
+- POST /api/posts
+- PUT /api/posts/:id
+- DELETE /api/posts/:id
 
-### Message Routes (`/api/messages`)
+### Messages
+- POST /api/messages
+- GET /api/messages/inbox
+- GET /api/messages/sent
+- GET /api/messages/conversations
+- GET /api/messages/thread/:otherUserId/:postId
+- POST /api/messages/reply
+- PUT /api/messages/read/:otherUserId/:postId
 
-**Send Message (Protected)**
-```
-POST /api/messages
-Authorization: Bearer <token>
-Content-Type: application/json
+## Messaging Data Model (Current)
 
-{
-  "receiverId": "user_id",
-  "postId": "post_id",
-  "messageText": "I found your wallet!"
-}
-```
+Message documents include:
 
-**Get Inbox (Protected)**
-```
-GET /api/messages/inbox
-Authorization: Bearer <token>
-```
+- senderId
+- receiverId
+- postId
+- messageText
+- isRead
+- createdAt
 
-**Get Sent Messages (Protected)**
-```
-GET /api/messages/sent
-Authorization: Bearer <token>
-```
+Conversations are grouped by:
+- other user
+- post id
 
-## Database Models
+This allows multiple parallel conversations with the same person on different posts.
 
-### User
-```javascript
-{
-  name: String,
-  email: String (unique),
-  password: String (hashed),
-  createdAt: Date
-}
-```
+## Production Readiness Checklist
 
-### Post
-```javascript
-{
-  type: String (lost/found),
-  title: String,
-  description: String,
-  imageUrl: String,
-  location: String,
-  category: String (Keys, Wallet, Pet, Phone, Documents, Other),
-  status: String (open/resolved),
-  createdBy: ObjectId (ref: User),
-  createdAt: Date
-}
-```
+Use this checklist before releasing.
 
-### Message
-```javascript
-{
-  senderId: ObjectId (ref: User),
-  receiverId: ObjectId (ref: User),
-  postId: ObjectId (ref: Post),
-  messageText: String,
-  createdAt: Date
-}
-```
+### Security
+- Strong JWT secret in production
+- MongoDB user with least privileges
+- CORS restricted to known domains
+- No secrets committed to git
+- Input validation enabled on all write endpoints
 
-## Authentication Flow
+### Reliability
+- Process manager for API (PM2/systemd/container orchestration)
+- Health checks wired to deployment platform
+- Graceful shutdown enabled
+- Log retention policy defined
 
-1. User registers/logs in
-2. Password is hashed with bcryptjs
-3. JWT token is generated and returned
-4. Token is stored in localStorage on frontend
-5. Axios interceptor automatically adds token to all requests
-6. Backend validates token with authMiddleware
-7. Token expiration triggers automatic logout
+### Performance
+- Image upload limits enforced
+- Static assets served via CDN/reverse proxy when needed
+- Query indexes reviewed for hot paths (messages, posts)
 
-## File Upload Configuration
+### Operations
+- Daily database backup policy
+- Rollback plan for frontend and backend
+- Release checklist with smoke tests
 
-- **Storage:** Local disk storage (`/backend/uploads/`)
-- **Allowed formats:** JPEG, JPG, PNG, WebP
-- **Max size:** 5MB
-- **Field name:** image
-- **Served from:** `http://localhost:5000/uploads/`
-
-## Key Features Explained
-
-### Search & Filter
-- Search by keyword (title, description, location)
-- Filter by type (lost/found)
-- Filter by category
-- Combine multiple filters
-
-### Protected Routes
-- Only authenticated users can access dashboard, create posts, edit posts, and messages
-- Unauthenticated users are redirected to login
-
-### Image Preview
-- Users can preview images before uploading
-- Images are served from backend's uploads folder
-- Fallback placeholder for missing images
-
-### Real-time Notifications
-- Toast notifications for all actions
-- Success, error, and info messages
-- Auto-dismiss after 3 seconds
-
-## Running in Production
+## Recommended Deployment Pattern
 
 ### Backend
-1. Set `NODE_ENV=production` in `.env`
-2. Use a process manager like PM2: `pm2 start server.js`
-3. Use a reverse proxy like Nginx
-4. Enable CORS for your frontend domain
+- Build target: Node server
+- Run with `npm start`
+- Place behind reverse proxy (Nginx/Cloud load balancer)
+- Configure environment variables via host secret manager
 
 ### Frontend
-1. Build for production: `npm run build`
-2. Output will be in `dist/` folder
-3. Deploy to Vercel, Netlify, or any static hosting
+- Build with `npm run build`
+- Deploy static assets to Vercel/Netlify/S3+CDN
+- Set `VITE_API_URL` to public backend URL
 
-## Troubleshooting
+## Smoke Test Script (Manual)
 
-### MongoDB Connection Issues
-- Ensure MongoDB Atlas IP whitelist includes your machine IP
-- Check credentials in MONGO_URI
-- Enable network access in MongoDB Atlas
+After deploy:
 
-### Port Already in Use
-- Backend (5000): `lsof -i :5000` then `kill -9 <PID>`
-- Frontend (5173): `lsof -i :5173` then `kill -9 <PID>`
+1. Register a test user
+2. Login and verify profile endpoint
+3. Create a post with image
+4. View post in public feed
+5. Send message from post detail
+6. Open messages page and verify conversation/thread load
+7. Reply in thread and verify optimistic update + polling sync
 
-### CORS Errors
-- Ensure backend has CORS enabled for `http://localhost:5173`
-- Check API base URL in frontend `services/api.js`
+## Common Troubleshooting
 
-### Image Upload Issues
-- Ensure backend has write permissions to `/uploads` folder
-- Check file size doesn't exceed 5MB
-- Verify MIME type is supported
+### 404 on new message routes
+- Restart backend after pulling new code
+- Confirm route exists: GET /api/messages/conversations (should return 401 without token, not 404)
 
-## Security Considerations
+### MongoDB connection failures
+- Check Atlas network access/IP allowlist
+- Confirm MONGO_URI and credentials
 
-- ✅ Passwords are hashed with bcryptjs
-- ✅ JWT tokens have expiration
-- ✅ Protected routes require authentication
-- ✅ File upload is validated
-- ✅ CORS is restricted to localhost:5173
-- ✅ Environment variables for sensitive data
+### Images not loading
+- Confirm backend static mount `/uploads`
+- Verify stored imageUrl starts with `/uploads/...`
 
-## Future Enhancements
+### Token issues
+- Clear localStorage and sign in again
+- Confirm frontend is sending Authorization header
 
-- Social media sharing
-- Email notifications
-- Advanced analytics dashboard
-- Mobile app with React Native
-- Real-time notifications with Socket.io
-- User reviews/ratings
-- Better image compression
-- Payment integration for premium features
+## Documentation Map
 
-## License
-
-This project is open source and available under the MIT License.
-
-## Support
-
-For issues or questions, please create an issue on GitHub or contact the development team.
-
----
-
-**Happy using Lost & Found Hub! 🔍**
+- Setup guide: SETUP.md
+- Feature map: FEATURES.md
+- File layout: FILE_STRUCTURE.md
+- Developer quick commands: QUICK_REFERENCE.md
+- Version log: VERSION.md
+- Design system: DESIGN_SYSTEM_REFERENCE.md

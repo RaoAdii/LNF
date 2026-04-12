@@ -1,225 +1,119 @@
-# 🎨 Production-Level UI/UX Design System - Quick Reference
+# Design System Reference
 
-## 📦 What's Implemented
+This document explains the visual language used by the frontend and how to extend it safely.
 
-### Design Tokens
-```css
-/* Colors */
---bg-base: #f8f7f4 (warm off-white)
---bg-surface: #ffffff
---ink-primary: #0f0f12 (text)
---ink-secondary: #4a4a55
---accent: #2563eb (electric blue)
---lost-color: #ef4444 (red)
---found-color: #22c55e (green)
+## 1. Core Design Tokens
 
-/* Typography */
-Display/Headings: Syne (700, 800)
-Body/UI: DM Sans (300, 400, 500)
-Monospace: JetBrains Mono
+Defined in frontend/src/index.css under :root.
 
-/* Border Radius */
-sm: 8px, md: 14px, lg: 22px, xl: 32px
+### Color Tokens
+- --bg-base: page background
+- --bg-surface: card/input base
+- --bg-elevated: translucent elevated surfaces
+- --ink-primary: main text
+- --ink-secondary: secondary text
+- --ink-muted: supporting labels/timestamps
+- --accent: primary interactive color
+- --accent-soft: subtle accent background
+- --lost-color: lost-state alert color
+- --found-color: found-state success color
+- --border: default border color
 
-/* Box Shadows */
-shadow-sm: 0 2px 12px rgba(0,0,0,0.06)
-shadow-md: 0 8px 40px rgba(0,0,0,0.10)
-shadow-lg: 0 24px 80px rgba(0,0,0,0.14)
-```
+### Shadow Tokens
+- --shadow-sm
+- --shadow-md
+- --shadow-lg
 
-### Glassmorphism Classes
-```jsx
-<div className="glass">
-  // background: rgba(255,255,255,0.65)
-  // backdrop-filter: blur(20px)
-  // border: 1px solid rgba(255,255,255,0.85)
-</div>
+### Radius Tokens
+- --radius-sm
+- --radius-md
+- --radius-lg
+- --radius-xl
 
-<div className="glass-strong">
-  // Increased blur for navbar on scroll
-</div>
-```
+## 2. Typography
 
-### Components & Usage
+Font families currently loaded:
+- Syne: headings, strong labels
+- DM Sans: body and controls
+- JetBrains Mono: optional technical text
 
-#### PageWrapper (All Pages)
-```jsx
-<PageWrapper>
-  {/* Content */}
-</PageWrapper>
-// Auto-applies Framer Motion transitions
-```
+Guidelines:
+- Use Syne for H1-H3 and key identity labels.
+- Use DM Sans for body copy and forms.
+- Keep body text readable with clear contrast against background tokens.
 
-#### Skeleton Loaders
-```jsx
-import { SkeletonCard, SkeletonGrid, SkeletonPostList } from '../components/Skeleton';
+## 3. Surface Patterns
 
-{isLoading ? <SkeletonGrid count={6} /> : <YourContent />}
-```
+### Glass Surfaces
+Use utility classes from index.css:
+- .glass
+- .glass-strong
+- .glass-subtle
 
-#### ConfirmModal
-```jsx
-<ConfirmModal
-  isOpen={isOpen}
-  title="Delete Post?"
-  message="This cannot be undone."
-  onConfirm={handleDelete}
-  onCancel={handleCancel}
-  isDangerous={true}
-/>
-```
+These classes combine blur, translucency, and soft borders. Prefer these over writing ad-hoc translucent backgrounds.
 
-#### Floating Labels
-```jsx
-<div className="input-wrapper">
-  <input placeholder="..." className="input" />
-  <label className="input-label">Label</label>
-</div>
-```
+### Cards
+- Use `card` base class with tokenized spacing and radius.
+- Avoid mixed corner radii unless interaction context requires asymmetry (chat bubbles).
 
-#### Badges
-```jsx
-<div className="badge badge-lost">⚠ LOST</div>
-<div className="badge badge-found">✓ FOUND</div>
-<div className="badge badge-category">Keys</div>
-```
+## 4. Motion Principles
 
-#### Buttons
-```jsx
-<button className="btn btn-primary">Primary</button>
-<button className="btn btn-secondary">Secondary</button>
-<button className="btn btn-ghost">Ghost</button>
-<button className="btn btn-danger">Danger</button>
-```
+The UI uses Framer Motion for major transitions and CSS keyframes for lightweight effects.
 
-## 🎬 Animations
+Available CSS keyframes include:
+- shimmer
+- shake
+- pulse-badge
+- fade-in-up
+- page-enter
+- page-exit
 
-### Page Transitions
-```jsx
-<motion.div
-  initial={{ opacity: 0, y: 16 }}
-  animate={{ opacity: 1, y: 0 }}
-  exit={{ opacity: 0, y: -10 }}
-  transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
->
-```
+Motion guidelines:
+- Keep durations short (typically 0.2s to 0.4s).
+- Prefer subtle movement over dramatic displacement.
+- Maintain consistent easing across similar interactions.
 
-### Card Hover
-```jsx
-<motion.div
-  className="card"
-  whileHover={{ y: -6 }}  // Lift on hover
-  transition={{ duration: 0.28, ease: [0.34, 1.56, 0.64, 1] }}  // Spring
->
-```
+## 5. Form Patterns
 
-### Badge Pulse (Lost Items)
-```css
-.badge-lost.pulse {
-  animation: pulse-badge 2s infinite;
-}
-```
+### Floating Label Inputs
+- Use .input-wrapper + .input + .input-label pattern.
+- Keep labels inside a relative wrapper with the input to preserve selector behavior.
+- Placeholder text should be focus-aware where required by UX.
 
-### Shake on Error
-```css
-animation: shake 0.4s ease-in-out;
-```
+### Validation
+- Errors appear below fields using muted red text tokens.
+- Avoid shifting layout aggressively on error; reserve space when practical.
 
-## 📱 Responsive Breakpoints
+## 6. Status and Feedback
 
-- **Mobile**: < 640px (single column, hamburger menu)
-- **Tablet**: 640-1024px (2-column grid)
-- **Desktop**: > 1024px (3-column grid, full nav)
+### Badges
+- Lost items use lost-color and optional pulse animation.
+- Found/resolved states use found-color.
+- Category badges should remain neutral unless state-specific emphasis is required.
 
-## 🎯 Key Features
+### Toasts
+- Toasts are used for async outcomes (success, warning, error).
+- Message text should be direct and action-oriented.
 
-✅ Glassmorphism on cards, navbar, modals
-✅ Ambient background orbs (4 blurred gradients)
-✅ Smooth page transitions with AnimatePresence
-✅ Skeleton loaders for all async data
-✅ Floating label inputs
-✅ Drag-and-drop image upload
-✅ Password strength indicator (Register)
-✅ Icon toggle for password visibility
-✅ Toast notifications (glass-styled)
-✅ Confirmation modals
-✅ Scroll-triggered animations
-✅ Responsive hamburger mobile menu
-✅ Form error shake animations
-✅ Badge pulse on Lost items
-✅ Loading button states
+## 7. Messaging UI Guidelines
 
-## 📁 Files Modified
+For chat views:
+- Keep conversation list compact with clear unread indicators.
+- Maintain left/right bubble distinction for incoming/outgoing messages.
+- Use date separators for long threads.
+- Keep reply composer anchored with clear send affordance.
 
-### Foundation
-- ✅ `tailwind.config.js` - Added all design tokens
-- ✅ `index.css` - Complete design system with animations
-- ✅ `package.json` - Added framer-motion
-- ✅ `App.jsx` - Added AnimatePresence, ambient orbs
+## 8. Responsiveness
 
-### Components (New)
-- ✅ `PageWrapper.jsx` - Page transitions
-- ✅ `Skeleton.jsx` - Skeleton loaders
-- ✅ `ConfirmModal.jsx` - Delete confirmations
-- ✅ `FloatingLabelInput.jsx` - Floating label inputs
+Layout expectations:
+- Mobile: single-column navigation with focused content area.
+- Tablet: adaptive spacing with moderate density.
+- Desktop: multi-panel layouts where context switching is frequent (for example, messages).
 
-### Components (Updated)
-- ✅ `Navbar.jsx` - Glass, scroll effects, mobile menu
-- ✅ `PostCard.jsx` - Hover animations, badges
-- ✅ `SearchBar.jsx` - Glass style, animations
-- ✅ `MessageBox.jsx` - New design system
+## 9. Extension Rules
 
-### Pages (All Redesigned)
-- ✅ `Home.jsx` - Grid, skeletons, scroll animations
-- ✅ `CreatePost.jsx` - Type toggles, category pills, drag-drop
-- ✅ `PostDetail.jsx` - Two-column layout, slide-in forms
-- ✅ `Dashboard.jsx` - Horizontal list, modals
-- ✅ `Messages.jsx` - Tabs, message detail modal
-- ✅ `Login.jsx` - Glass card, floating labels, eye toggle
-- ✅ `Register.jsx` - Password strength bar
-- ✅ `EditPost.jsx` - Same as CreatePost
-
-## 🚀 Next Steps
-
-1. npm install completes (in progress)
-2. Run `npm run dev` to start development server
-3. Visit http://localhost:5173
-4. Test all pages and interactions
-5. Verify animations and transitions work smoothly
-
-## 🎨 Customization
-
-### Change Primary Color
-Edit `index.css` and `tailwind.config.js`:
-```css
---accent: #2563eb;  /* Change this */
-```
-
-### Adjust Animation Speed
-Edit timings in components:
-```jsx
-transition={{ duration: 0.3 }}  // Slower: 0.5, Faster: 0.2
-```
-
-### Modify Glassmorphism
-Edit `.glass` class in `index.css`:
-```css
-backdrop-filter: blur(32px);  /* Change blur amount */
-opacity: 0.75;  /* Change opacity */
-```
-
-## 💡 Best Practices
-
-1. Always wrap pages with `<PageWrapper>`
-2. Use `<AnimatePresence mode="wait">` for route transitions
-3. Use skeleton loaders during async data fetching
-4. Show confirmation modals before destructive actions
-5. Use floating labels for all form inputs
-6. Wrap buttons with Framer Motion for micro-interactions
-7. Use toast notifications for user feedback
-
----
-
-**Design System Version**: 1.0
-**Last Updated**: 2024
-**Status**: Production Ready ✅
+When adding new UI:
+- Reuse token variables first.
+- Reuse existing utility classes before introducing new classes.
+- Keep animations consistent with current timing/easing language.
+- Update this document whenever introducing new global tokens or interaction patterns.

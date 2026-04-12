@@ -1,141 +1,145 @@
-# Installation & Running Instructions
+# Setup Guide
 
-## Quick Start Guide
+This guide is intended for contributors and deployment engineers who need predictable setup steps for local development and production rollout.
 
-### Step 1: Clone or Extract the Project
+## 1. Local Development
+
+### 1.1 Clone and open project
+
 ```bash
+cd d:\
+git clone <repo-url> LNF
 cd LNF
 ```
 
-### Step 2: Backend Setup
+### 1.2 Backend setup
 
 ```bash
 cd backend
-
-# Install dependencies
 npm install
-
-# Configure .env file with your MongoDB URI
-# Edit .env and update:
-# MONGO_URI=your_mongodb_atlas_connection_string
-# JWT_SECRET=your_secret_key
-
-# Start backend server
-npm run dev
 ```
 
-Backend will run on: `http://localhost:5000`
+Create `.env`:
 
-### Step 3: Frontend Setup (in a new terminal)
-
-```bash
-cd frontend
-
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-```
-
-Frontend will run on: `http://localhost:5173`
-
-## Environment Configuration
-
-### Backend (.env)
-```
+```env
 PORT=5000
-MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/lost-found-hub?retryWrites=true&w=majority
-JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
+MONGO_URI=your_mongodb_connection_string
+JWT_SECRET=replace_with_a_strong_random_value
 JWT_EXPIRES_IN=7d
 NODE_ENV=development
+FRONTEND_URL=http://localhost:5173
 ```
 
-Get MongoDB URI from:
-1. Go to MongoDB Atlas (https://www.mongodb.com/cloud/atlas)
-2. Create a cluster
-3. Get connection string from "Connect" button
+Start API:
 
-## Testing the Application
-
-1. **Register** a new account at `http://localhost:5173/register`
-2. **Login** with your credentials at `http://localhost:5173/login`
-3. **Create a Post** at `/create-post`
-4. **Browse Posts** on home page
-5. **Search & Filter** posts
-6. **View Post Details** by clicking on any post card
-7. **Send Messages** to other users about posts
-8. **Check Messages** in the Messages section
-
-## Features to Try
-
-- ✅ User Registration & Login
-- ✅ Create Lost/Found Posts with Images
-- ✅ Edit and Delete Your Posts
-- ✅ Search Posts by Keyword
-- ✅ Filter by Type (Lost/Found) and Category
-- ✅ Upload Images (JPG, PNG, WebP, max 5MB)
-- ✅ Send Messages to Post Owners
-- ✅ View Inbox & Sent Messages
-- ✅ Mark Posts as Resolved
-- ✅ Protected Dashboard for authenticated users
-
-## Default API Endpoints
-
-```
-Auth:
-  POST   /api/auth/register
-  POST   /api/auth/login
-  GET    /api/auth/profile
-
-Posts:
-  GET    /api/posts
-  GET    /api/posts/:id
-  GET    /api/posts/my-posts
-  POST   /api/posts
-  PUT    /api/posts/:id
-  DELETE /api/posts/:id
-
-Messages:
-  POST   /api/messages
-  GET    /api/messages/inbox
-  GET    /api/messages/sent
+```bash
+npm run dev
 ```
 
-## Common Issues
+Expected: server listens on port 5000 and connects to MongoDB.
 
-### "Cannot POST /api/auth/register"
-- Make sure backend is running on port 5000
-- Check CORS configuration in server.js
+### 1.3 Frontend setup
 
-### "MONGO_URI is not defined"
-- Create .env file in backend folder
-- Add MONGO_URI=your_connection_string
+Open a second terminal:
 
-### "API call failed"
-- Check if both frontend and backend are running
-- Verify port numbers (5000 for backend, 5173 for frontend)
-
-### "Image upload not working"
-- Ensure uploads folder exists in backend
-- Check file size < 5MB
-- Verify MIME type is image
-
-## Build for Production
-
-### Frontend
 ```bash
 cd frontend
-npm run build
-# Output in dist/ folder - ready to deploy
+npm install
+npm run dev
 ```
 
-### Backend
+Optional `frontend/.env`:
+
+```env
+VITE_API_URL=http://localhost:5000
+```
+
+Expected: Vite serves app on port 5173.
+
+## 2. Verify Core Flows
+
+Run through these in order:
+
+1. Register user
+2. Login
+3. Create post with image
+4. Open post detail
+5. Send contact message
+6. Open messages and verify thread appears
+7. Reply and verify thread updates
+
+## 3. Production Setup
+
+### 3.1 Backend
+
+- Set `NODE_ENV=production`
+- Set real `FRONTEND_URL` origin
+- Use secure secrets for JWT and database
+- Run with process manager (PM2/systemd/container)
+
+Example PM2:
+
 ```bash
-# Use PM2 or Docker for production
-npm install -g pm2
-pm2 start server.js --name "lost-found-hub"
+cd backend
+npm install --omit=dev
+pm2 start server.js --name lnf-api
+pm2 save
 ```
 
----
-That's it! The application is now ready to use. 🎉
+### 3.2 Frontend
+
+```bash
+cd frontend
+npm ci
+npm run build
+```
+
+Publish `dist` to your static host.
+
+### 3.3 Reverse proxy and TLS
+
+- Route `/api/*` to backend service
+- Route frontend assets from static host
+- Enforce HTTPS
+- Add compression and cache headers for static assets
+
+## 4. Security Hardening
+
+- Rotate JWT secret periodically
+- Restrict CORS origins
+- Restrict MongoDB network access
+- Back up database daily
+- Monitor logs for repeated 401/403/500 spikes
+
+## 5. Operational Checks Before Release
+
+- API health endpoint returns 200
+- Upload folder writable
+- Message routes return expected auth behavior
+- Client can read/write posts and messages
+- Error toasts show useful messages for failures
+
+## 6. Fast Debug Notes
+
+### Route exists check
+
+```bash
+curl -i http://localhost:5000/api/messages/conversations
+```
+
+Expected without token: `401`.
+
+### Port conflict on 5000
+
+PowerShell:
+
+```powershell
+Get-Process -Id (Get-NetTCPConnection -LocalPort 5000).OwningProcess | Stop-Process -Force
+```
+
+### Clean install if dependencies drift
+
+```bash
+cd backend && rm -rf node_modules package-lock.json && npm install
+cd ../frontend && rm -rf node_modules package-lock.json && npm install
+```
