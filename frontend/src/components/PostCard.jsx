@@ -6,7 +6,9 @@ import { API_BASE_URL } from '../services/api';
 const PostCard = ({ post }) => {
   const isLost = post.type === 'lost';
   const imageUrl = post.imageUrl
-    ? `${API_BASE_URL}/uploads/${post.imageUrl}`
+    ? (post.imageUrl.startsWith('http')
+      ? post.imageUrl
+      : `${API_BASE_URL}${post.imageUrl.startsWith('/') ? '' : '/'}${post.imageUrl}`)
     : '/placeholder.svg';
 
   const getStatusColor = () => {

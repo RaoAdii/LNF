@@ -5,6 +5,7 @@ const SearchBar = ({ onSearch, onTypeChange, onCategoryChange }) => {
   const [query, setQuery] = useState('');
   const [type, setType] = useState('');
   const [category, setCategory] = useState('');
+  const [focused, setFocused] = useState({});
 
   const handleSearch = (e) => {
     const value = e.target.value;
@@ -45,9 +46,11 @@ const SearchBar = ({ onSearch, onTypeChange, onCategoryChange }) => {
         <div className="input-wrapper">
           <input
             type="text"
-            placeholder="Search by keyword..."
+            placeholder={focused.search || query ? "Search by keyword..." : ""}
             value={query}
             onChange={handleSearch}
+            onFocus={() => setFocused(prev => ({ ...prev, search: true }))}
+            onBlur={() => setFocused(prev => ({ ...prev, search: false }))}
             className="input"
           />
           <label className="input-label">Search</label>

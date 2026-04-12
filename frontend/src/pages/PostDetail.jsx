@@ -70,7 +70,9 @@ const PostDetail = () => {
   const canContact = user && !isOwner;
   const isLost = post.type === 'lost';
   const imageUrl = post.imageUrl
-    ? `${API_BASE_URL}/uploads/${post.imageUrl}`
+    ? (post.imageUrl.startsWith('http')
+      ? post.imageUrl
+      : `${API_BASE_URL}${post.imageUrl.startsWith('/') ? '' : '/'}${post.imageUrl}`)
     : '/placeholder.svg';
 
   return (

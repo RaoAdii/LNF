@@ -5,6 +5,8 @@ const FloatingLabelInput = ({
   type = 'text',
   value,
   onChange,
+  onFocus,
+  onBlur,
   placeholder = '',
   required = false,
   disabled = false,
@@ -13,6 +15,7 @@ const FloatingLabelInput = ({
   ...rest
 }) => {
   const [isFocused, setIsFocused] = useState(false);
+  const hasValue = value !== undefined && value !== null && String(value).trim() !== '';
 
   return (
     <div className="mb-4">
@@ -22,9 +25,15 @@ const FloatingLabelInput = ({
             type={type}
             value={value}
             onChange={onChange}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-            placeholder={placeholder}
+            onFocus={(e) => {
+              setIsFocused(true);
+              if (onFocus) onFocus(e);
+            }}
+            onBlur={(e) => {
+              setIsFocused(false);
+              if (onBlur) onBlur(e);
+            }}
+            placeholder={isFocused || hasValue ? placeholder : ''}
             disabled={disabled}
             className={`input ${error ? 'border-lost-color focus:box-shadow-lost' : ''}`}
             {...rest}

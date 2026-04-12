@@ -99,16 +99,21 @@ const Login = () => {
           <form onSubmit={formik.handleSubmit} className="space-y-4 mb-6">
             {/* Email */}
             <div className="input-wrapper">
-              <input
-                type="email"
-                name="email"
-                placeholder={focused.email || formik.values.email ? "your@email.com" : ""}
-                className="input"
-                onFocus={() => setFocused(prev => ({ ...prev, email: true }))}
-                onBlur={() => setFocused(prev => ({ ...prev, email: false }))}
-                {...formik.getFieldProps('email')}
-              />
-              <label className="input-label">Email Address</label>
+              <div className="relative">
+                <input
+                  type="email"
+                  name="email"
+                  placeholder={focused.email || formik.values.email ? "your@email.com" : ""}
+                  className="input"
+                  {...formik.getFieldProps('email')}
+                  onFocus={() => setFocused(prev => ({ ...prev, email: true }))}
+                  onBlur={(e) => {
+                    formik.handleBlur(e);
+                    setFocused(prev => ({ ...prev, email: false }));
+                  }}
+                />
+                <label className="input-label">Email Address</label>
+              </div>
               {formik.touched.email && formik.errors.email && (
                 <p className="text-lost-color text-xs mt-1">{formik.errors.email}</p>
               )}
@@ -122,9 +127,12 @@ const Login = () => {
                   name="password"
                   placeholder={focused.password || formik.values.password ? "••••••••" : ""}
                   className="input pr-10 py-3"
-                  onFocus={() => setFocused(prev => ({ ...prev, password: true }))}
-                  onBlur={() => setFocused(prev => ({ ...prev, password: false }))}
                   {...formik.getFieldProps('password')}
+                  onFocus={() => setFocused(prev => ({ ...prev, password: true }))}
+                  onBlur={(e) => {
+                    formik.handleBlur(e);
+                    setFocused(prev => ({ ...prev, password: false }));
+                  }}
                 />
                 <button
                   type="button"

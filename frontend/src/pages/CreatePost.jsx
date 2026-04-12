@@ -32,6 +32,7 @@ const CreatePost = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
   const [isDragActive, setIsDragActive] = useState(false);
+  const [isDescriptionFocused, setIsDescriptionFocused] = useState(false);
 
   const formik = useFormik({
     initialValues: {
@@ -215,10 +216,14 @@ const CreatePost = () => {
             <div className="input-wrapper">
               <textarea
                 name="description"
-                placeholder="Describe the item in detail..."
+                placeholder={isDescriptionFocused || formik.values.description ? 'Describe the item in detail...' : ''}
                 value={formik.values.description}
                 onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
+                onFocus={() => setIsDescriptionFocused(true)}
+                onBlur={(e) => {
+                  formik.handleBlur(e);
+                  setIsDescriptionFocused(false);
+                }}
                 className="input min-h-24"
               />
               <label className="input-label">Description</label>

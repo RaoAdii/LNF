@@ -75,14 +75,14 @@ const Navbar = () => {
               
               {/* LNF wordmark */}
               <text x="44" y="21" fontFamily="'Syne', sans-serif" 
-                    fontWeight="800" fontSize="18" fill="#ffffff" 
+                    fontWeight="800" fontSize="18" fill="#000000" 
                     letterSpacing="-0.8">LNF</text>
               
               {/* Subtitle */}
               <text x="44" y="36" fontFamily="'DM Sans', sans-serif" 
                     fontWeight="300" fontSize="9" 
-                    fill="rgba(255,255,255,0.38)" letterSpacing="2.5">
-                LOST &amp; FOUND HUB
+                    fill="rgba(0, 0, 0, 0.38)" letterSpacing="2.5">
+                LOST &amp; FOUND
               </text>
               
             </svg>

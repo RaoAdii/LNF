@@ -35,6 +35,7 @@ const EditPost = () => {
   const [imagePreview, setImagePreview] = useState(null);
   const [currentImageUrl, setCurrentImageUrl] = useState(null);
   const [isDragActive, setIsDragActive] = useState(false);
+  const [isDescriptionFocused, setIsDescriptionFocused] = useState(false);
 
   const formik = useFormik({
     initialValues: {
@@ -93,7 +94,11 @@ const EditPost = () => {
         image: null,
       });
       if (post.imageUrl) {
-        setCurrentImageUrl(`${API_BASE_URL}/uploads/${post.imageUrl}`);
+        setCurrentImageUrl(
+          post.imageUrl.startsWith('http')
+            ? post.imageUrl
+            : `${API_BASE_URL}${post.imageUrl.startsWith('/') ? '' : '/'}${post.imageUrl}`
+        );
       }
     } catch (error) {
       if (error.response?.status === 403) {
@@ -258,10 +263,14 @@ const EditPost = () => {
             <div className="input-wrapper">
               <textarea
                 name="description"
-                placeholder="Describe the item in detail..."
+                placeholder={isDescriptionFocused || formik.values.description ? 'Describe the item in detail...' : ''}
                 value={formik.values.description}
                 onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
+                onFocus={() => setIsDescriptionFocused(true)}
+                onBlur={(e) => {
+                  formik.handleBlur(e);
+                  setIsDescriptionFocused(false);
+                }}
                 className="input min-h-24"
               />
               <label className="input-label">Description</label>

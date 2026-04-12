@@ -135,16 +135,21 @@ const Register = () => {
           <form onSubmit={formik.handleSubmit} className="space-y-4 mb-6">
             {/* Name */}
             <div className="input-wrapper">
-              <input
-                type="text"
-                name="name"
-                placeholder={focused.name || formik.values.name ? "John Doe" : ""}
-                className="input"
-                onFocus={() => setFocused(prev => ({ ...prev, name: true }))}
-                onBlur={() => setFocused(prev => ({ ...prev, name: false }))}
-                {...formik.getFieldProps('name')}
-              />
-              <label className="input-label">Full Name</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  name="name"
+                  placeholder={focused.name || formik.values.name ? "John Doe" : ""}
+                  className="input"
+                  {...formik.getFieldProps('name')}
+                  onFocus={() => setFocused(prev => ({ ...prev, name: true }))}
+                  onBlur={(e) => {
+                    formik.handleBlur(e);
+                    setFocused(prev => ({ ...prev, name: false }));
+                  }}
+                />
+                <label className="input-label">Full Name</label>
+              </div>
               {formik.touched.name && formik.errors.name && (
                 <p className="text-lost-color text-xs mt-1">{formik.errors.name}</p>
               )}
@@ -152,16 +157,21 @@ const Register = () => {
 
             {/* Email */}
             <div className="input-wrapper">
-              <input
-                type="email"
-                name="email"
-                placeholder={focused.email || formik.values.email ? "your@email.com" : ""}
-                className="input"
-                onFocus={() => setFocused(prev => ({ ...prev, email: true }))}
-                onBlur={() => setFocused(prev => ({ ...prev, email: false }))}
-                {...formik.getFieldProps('email')}
-              />
-              <label className="input-label">Email Address</label>
+              <div className="relative">
+                <input
+                  type="email"
+                  name="email"
+                  placeholder={focused.email || formik.values.email ? "your@email.com" : ""}
+                  className="input"
+                  {...formik.getFieldProps('email')}
+                  onFocus={() => setFocused(prev => ({ ...prev, email: true }))}
+                  onBlur={(e) => {
+                    formik.handleBlur(e);
+                    setFocused(prev => ({ ...prev, email: false }));
+                  }}
+                />
+                <label className="input-label">Email Address</label>
+              </div>
               {formik.touched.email && formik.errors.email && (
                 <p className="text-lost-color text-xs mt-1">{formik.errors.email}</p>
               )}
@@ -175,9 +185,12 @@ const Register = () => {
                   name="password"
                   placeholder={focused.password || formik.values.password ? "••••••••" : ""}
                   className="input pr-10 py-3"
-                  onFocus={() => setFocused(prev => ({ ...prev, password: true }))}
-                  onBlur={() => setFocused(prev => ({ ...prev, password: false }))}
                   {...formik.getFieldProps('password')}
+                  onFocus={() => setFocused(prev => ({ ...prev, password: true }))}
+                  onBlur={(e) => {
+                    formik.handleBlur(e);
+                    setFocused(prev => ({ ...prev, password: false }));
+                  }}
                 />
                 <button
                   type="button"
@@ -216,9 +229,12 @@ const Register = () => {
                   name="confirmPassword"
                   placeholder={focused.confirmPassword || formik.values.confirmPassword ? "••••••••" : ""}
                   className="input pr-10 py-3"
-                  onFocus={() => setFocused(prev => ({ ...prev, confirmPassword: true }))}
-                  onBlur={() => setFocused(prev => ({ ...prev, confirmPassword: false }))}
                   {...formik.getFieldProps('confirmPassword')}
+                  onFocus={() => setFocused(prev => ({ ...prev, confirmPassword: true }))}
+                  onBlur={(e) => {
+                    formik.handleBlur(e);
+                    setFocused(prev => ({ ...prev, confirmPassword: false }));
+                  }}
                 />
                 <button
                   type="button"
