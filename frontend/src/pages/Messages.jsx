@@ -102,6 +102,12 @@ const formatThreadTime = (dateString) =>
     minute: '2-digit',
   });
 
+const messageScrollStyle = {
+  overflowY: 'auto',
+  overscrollBehavior: 'contain',
+  WebkitOverflowScrolling: 'touch',
+};
+
 const Messages = () => {
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
@@ -112,7 +118,8 @@ const Messages = () => {
   const [isSending, setIsSending] = useState(false);
   const [mobileThreadOpen, setMobileThreadOpen] = useState(false);
 
-  const messageEndRef = useRef(null);
+  const messagesEndRef = useRef(null);
+  const isInitialLoad = useRef(true);
   const replyInputRef = useRef(null);
   const selectedConversationRef = useRef(null);
 
@@ -129,12 +136,6 @@ const Messages = () => {
   useEffect(() => {
     selectedConversationRef.current = selectedConversation;
   }, [selectedConversation]);
-
-  const scrollToBottom = useCallback(() => {
-    if (messageEndRef.current) {
-      messageEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, []);
 
   const fetchConversationsData = useCallback(async (silent = false) => {
     if (!silent) {
@@ -245,8 +246,18 @@ const Messages = () => {
   }, [fetchConversationsData, fetchThreadData]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [threadMessages, scrollToBottom]);
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({
+        behavior: isInitialLoad.current ? 'instant' : 'smooth',
+        block: 'end',
+      });
+      isInitialLoad.current = false;
+    }
+  }, [threadMessages]);
+
+  useEffect(() => {
+    isInitialLoad.current = true;
+  }, [selectedConversation]);
 
   const handleSelectConversation = (conversation) => {
     setSelectedConversation(conversation);
@@ -395,7 +406,7 @@ const Messages = () => {
                   <p className="text-sm font-dm font-medium text-ink-secondary">Conversations</p>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                <div className="flex-1 p-2 space-y-2" style={messageScrollStyle}>
                   {isLoadingConversations ? (
                     Array.from({ length: 3 }).map((_, index) => (
                       <div
@@ -436,7 +447,7 @@ const Messages = () => {
                           key={getConversationKey(conversation)}
                           type="button"
                           onClick={() => handleSelectConversation(conversation)}
-                          className={`w-full text-left p-3 rounded-xl transition-all border-l-4 ${
+                          className={`w-full text-left p-3 rounded-xl transition-colors border-l-4 ${
                             isSelected
                               ? 'bg-white/80 border-l-accent shadow-sm'
                               : 'border-l-transparent hover:bg-white/65'
@@ -533,7 +544,7 @@ const Messages = () => {
                     </div>
                   </div>
 
-                  <div className="flex-1 overflow-y-auto px-4 py-4 bg-[rgba(255,255,255,0.35)]">
+                  <div className="flex-1 px-4 py-4 bg-[rgba(255,255,255,0.35)]" style={messageScrollStyle}>
                     {isLoadingThread && threadMessages.length === 0 ? (
                       <div className="h-full flex items-center justify-center">
                         <p className="text-sm font-dm text-ink-muted">Loading conversation...</p>
@@ -598,7 +609,7 @@ const Messages = () => {
                             </React.Fragment>
                           );
                         })}
-                        <div ref={messageEndRef} />
+                        <div ref={messagesEndRef} />
                       </div>
                     )}
                   </div>

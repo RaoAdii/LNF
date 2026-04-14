@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import PostCard from '../components/PostCard';
 import SearchBar from '../components/SearchBar';
 import PageWrapper from '../components/PageWrapper';
@@ -216,7 +216,9 @@ const Home = () => {
 
         {/* Posts Grid */}
         {isLoading ? (
-          <SkeletonGrid count={6} />
+          <div data-loading="true">
+            <SkeletonGrid count={6} />
+          </div>
         ) : posts.length === 0 ? (
           <motion.div
             className="text-center py-20"
@@ -239,28 +241,28 @@ const Home = () => {
             </button>
           </motion.div>
         ) : (
-          <motion.div
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3 }}
-          >
-            {posts.map((post, index) => (
-              <motion.div
-                key={post._id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{
-                  duration: 0.5,
-                  delay: index * 0.08,
-                  ease: [0.22, 1, 0.36, 1],
-                }}
-                viewport={{ once: true, margin: '-50px' }}
-              >
-                <PostCard post={post} />
-              </motion.div>
-            ))}
-          </motion.div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-loading="true">
+            <AnimatePresence initial={false}>
+              {posts.map((post, index) => (
+                <motion.div
+                  key={post._id}
+                  initial={index < 6 ? { opacity: 0, y: 12 } : false}
+                  animate={{
+                    opacity: 1,
+                    y: 0,
+                    transition: {
+                      delay: index < 6 ? index * 0.03 : 0,
+                      duration: 0.22,
+                      ease: [0.22, 1, 0.36, 1],
+                    },
+                  }}
+                  exit={false}
+                >
+                  <PostCard post={post} />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
         )}
       </div>
     </PageWrapper>

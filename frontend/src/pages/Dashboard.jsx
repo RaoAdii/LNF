@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { postAPI } from '../services/api';
 import { toast } from 'react-toastify';
 import PageWrapper from '../components/PageWrapper';
@@ -82,7 +82,9 @@ const Dashboard = () => {
 
         {/* Content */}
         {isLoading ? (
-          <SkeletonPostList count={3} />
+          <div data-loading="true">
+            <SkeletonPostList count={3} />
+          </div>
         ) : posts.length === 0 ? (
           <motion.div
             className="text-center py-20"
@@ -101,33 +103,49 @@ const Dashboard = () => {
             </Link>
           </motion.div>
         ) : (
-          <motion.div
-            className="space-y-3"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3 }}
-          >
-            {posts.map((post, index) => {
+          <LayoutGroup>
+            <motion.div
+              className="space-y-3"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3 }}
+              data-loading="true"
+            >
+              <AnimatePresence mode="popLayout">
+                {posts.map((post, index) => {
               const isLost = post.type === 'lost';
               const imageUrl = post.imageUrl
-                ? `http://localhost:5000${post.imageUrl}`
-                : 'https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?w=100&h=100&fit=crop';
+                ? (post.imageUrl.startsWith('http') ? post.imageUrl : `http://localhost:5000${post.imageUrl}`)
+                : '/placeholder.svg';
 
               return (
                 <motion.div
                   key={post._id}
-                  className="card card-glass flex items-center gap-4 p-4 group hover:shadow-md transition-all"
-                  whileHover={{ x: 4 }}
-                  initial={{ opacity: 0, x: -20 }}
+                  layout
+                  className="glass rounded-2xl border border-white/80 flex items-center gap-4 p-4 group"
+                  whileHover={{
+                    x: 4,
+                    transition: { type: 'spring', stiffness: 420, damping: 30 },
+                  }}
+                  initial={{ opacity: 0, x: -16 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
+                  exit={{ opacity: 0, x: 12, transition: { duration: 0.15 } }}
+                  transition={{ delay: index * 0.04, duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
                 >
                   {/* Thumbnail */}
-                  <img
-                    src={imageUrl}
-                    alt={post.title}
-                    className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
-                  />
+                  <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                    <img
+                      src={imageUrl}
+                      alt={post.title}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      decoding="async"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = '/placeholder.svg';
+                      }}
+                    />
+                  </div>
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
@@ -177,13 +195,15 @@ const Dashboard = () => {
                 </motion.div>
               );
             })}
-          </motion.div>
+              </AnimatePresence>
+            </motion.div>
+          </LayoutGroup>
         )}
 
         {/* Mobile Floating Action */}
         <Link
           to="/create-post"
-          className="fixed bottom-6 right-6 w-16 h-16 rounded-full bg-accent text-white flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-110 sm:hidden font-bold text-2xl"
+          className="fixed bottom-6 right-6 w-16 h-16 rounded-full bg-accent text-white flex items-center justify-center shadow-lg hover:shadow-xl transition-transform hover:scale-110 sm:hidden font-bold text-2xl"
         >
           +
         </Link>

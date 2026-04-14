@@ -15,7 +15,7 @@ export const SkeletonAvatar = () => (
 export const SkeletonPostList = ({ count = 3 }) => (
   <div className="space-y-4">
     {Array.from({ length: count }).map((_, i) => (
-      <div key={i} className="flex gap-4 p-4 rounded-lg bg-white border border-[rgba(0,0,0,0.07)]">
+      <div key={`skeleton-post-${i}`} className="flex gap-4 p-4 rounded-lg bg-white border border-[rgba(0,0,0,0.07)]">
         <SkeletonAvatar />
         <div className="flex-1">
           <SkeletonText width="w-1/3" height="h-4" />
@@ -29,7 +29,7 @@ export const SkeletonPostList = ({ count = 3 }) => (
 export const SkeletonGrid = ({ count = 6 }) => (
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
     {Array.from({ length: count }).map((_, i) => (
-      <SkeletonCard key={i} />
+      <SkeletonCard key={`skeleton-card-${i}`} />
     ))}
   </div>
 );

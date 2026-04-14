@@ -1,25 +1,30 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { postAPI, API_BASE_URL } from '../services/api';
+import { postAPI } from '../services/api';
 import { toast } from 'react-toastify';
 import PageWrapper from '../components/PageWrapper';
 import MessageBox from '../components/MessageBox';
 import ConfirmModal from '../components/ConfirmModal';
-import { SkeletonCard, SkeletonText } from '../components/Skeleton';
+import { SkeletonCard } from '../components/Skeleton';
 import { AuthContext } from '../context/AuthContext';
 
 const PostDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
   const [post, setPost] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showMessageForm, setShowMessageForm] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
 
   useEffect(() => {
     fetchPost();
+  }, [id]);
+
+  useEffect(() => {
+    setImgLoaded(false);
   }, [id]);
 
   const fetchPost = async () => {
@@ -47,7 +52,7 @@ const PostDetail = () => {
   if (isLoading) {
     return (
       <PageWrapper>
-        <div className="container-lg px-6 py-12">
+        <div className="container-lg px-6 py-12" data-loading="true">
           <SkeletonCard />
         </div>
       </PageWrapper>
@@ -69,11 +74,7 @@ const PostDetail = () => {
     (user._id === post.createdBy._id || user._id === post.createdBy);
   const canContact = user && !isOwner;
   const isLost = post.type === 'lost';
-  const imageUrl = post.imageUrl
-    ? (post.imageUrl.startsWith('http')
-      ? post.imageUrl
-      : `${API_BASE_URL}${post.imageUrl.startsWith('/') ? '' : '/'}${post.imageUrl}`)
-    : '/placeholder.svg';
+  const imageUrl = post.imageUrl || '/placeholder.svg';
 
   return (
     <PageWrapper>
@@ -98,17 +99,30 @@ const PostDetail = () => {
           >
             {/* Image Card */}
             <div className="card card-glass overflow-hidden relative">
-              <div className="relative h-96 overflow-hidden rounded-lg bg-accent-soft">
-                <motion.img
+              <div className="relative overflow-hidden bg-gray-100 rounded-lg" style={{ aspectRatio: '4/3' }}>
+                {!imgLoaded && (
+                  <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 background-size-200" />
+                )}
+
+                <img
                   src={imageUrl}
                   alt={post.title}
-                  className="w-full h-full object-cover"
+                  onLoad={() => setImgLoaded(true)}
                   onError={(e) => {
                     e.target.onerror = null;
                     e.target.src = '/placeholder.svg';
+                    setImgLoaded(true);
                   }}
-                  whileHover={{ scale: 1.04 }}
-                  transition={{ duration: 0.4 }}
+                  loading="eager"
+                  decoding="async"
+                  style={{
+                    opacity: imgLoaded ? 1 : 0,
+                    transition: 'opacity 400ms cubic-bezier(0.4, 0, 0.2, 1)',
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    transform: 'translateZ(0)',
+                  }}
                 />
 
                 {/* Badge Overlay */}

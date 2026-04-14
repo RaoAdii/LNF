@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AuthContext } from '../context/AuthContext';
@@ -8,16 +8,6 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   const handleLogout = () => {
     logout();
@@ -41,9 +31,7 @@ const Navbar = () => {
   return (
     <>
       <nav
-        className={`sticky top-0 h-16 z-40 transition-all duration-300 ${
-          scrolled ? 'glass-strong' : 'glass'
-        }`}
+        className="sticky top-0 h-16 z-40 navbar-shell glass shadow-md bg-white/90"
         style={{
           borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
         }}
@@ -94,7 +82,7 @@ const Navbar = () => {
               <Link
                 key={link.href}
                 to={link.href}
-                className={`text-sm font-dm transition-all duration-150 relative group ${
+                className={`text-sm font-dm transition-colors duration-150 relative group ${
                   isActive(link.href)
                     ? 'text-ink-primary font-medium'
                     : 'text-ink-secondary hover:text-ink-primary'
@@ -145,9 +133,9 @@ const Navbar = () => {
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="md:hidden w-8 h-8 flex flex-col justify-center items-center gap-1.5 hover:bg-accent-soft rounded-md transition-colors"
           >
-            <div className={`h-0.5 w-5 bg-ink-primary transition-all ${isMenuOpen ? 'transform rotate-45 translate-y-2' : ''}`} />
-            <div className={`h-0.5 w-5 bg-ink-primary transition-all ${isMenuOpen ? 'opacity-0' : ''}`} />
-            <div className={`h-0.5 w-5 bg-ink-primary transition-all ${isMenuOpen ? 'transform -rotate-45 -translate-y-2' : ''}`} />
+            <div className={`h-0.5 w-5 bg-ink-primary transition-transform ${isMenuOpen ? 'transform rotate-45 translate-y-2' : ''}`} />
+            <div className={`h-0.5 w-5 bg-ink-primary transition-opacity ${isMenuOpen ? 'opacity-0' : ''}`} />
+            <div className={`h-0.5 w-5 bg-ink-primary transition-transform ${isMenuOpen ? 'transform -rotate-45 -translate-y-2' : ''}`} />
           </button>
         </div>
       </nav>
@@ -157,7 +145,7 @@ const Navbar = () => {
         {isMenuOpen && (
           <>
             <motion.div
-              className="fixed inset-0 bg-black/30 backdrop-blur-sm z-30 md:hidden"
+              className="fixed inset-0 bg-black/30 z-30 md:hidden"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}

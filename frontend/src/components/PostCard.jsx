@@ -1,15 +1,15 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { API_BASE_URL } from '../services/api';
 
 const PostCard = ({ post }) => {
   const isLost = post.type === 'lost';
-  const imageUrl = post.imageUrl
-    ? (post.imageUrl.startsWith('http')
-      ? post.imageUrl
-      : `${API_BASE_URL}${post.imageUrl.startsWith('/') ? '' : '/'}${post.imageUrl}`)
-    : '/placeholder.svg';
+  const imageUrl = post.imageUrl || '/placeholder.svg';
+  const [imgLoaded, setImgLoaded] = useState(false);
+
+  useEffect(() => {
+    setImgLoaded(false);
+  }, [imageUrl]);
 
   const getStatusColor = () => {
     if (post.status === 'resolved') return 'badge-found';
@@ -29,22 +29,43 @@ const PostCard = ({ post }) => {
   return (
     <Link to={`/post/${post._id}`}>
       <motion.div
-        className="card overflow-hidden group"
-        whileHover={{ y: -6 }}
-        transition={{ duration: 0.28, ease: [0.34, 1.56, 0.64, 1] }}
+        className="glass rounded-2xl overflow-hidden cursor-pointer group h-full"
+        whileHover={{
+          y: -4,
+          transition: {
+            type: 'spring',
+            stiffness: 300,
+            damping: 30,
+          },
+        }}
+        whileTap={{ scale: 0.98 }}
+        style={{ transform: 'translateZ(0)' }}
       >
         {/* Image Container */}
-        <div className="relative overflow-hidden rounded-lg mb-4 h-48 bg-accent-soft">
-          <motion.img
+        <div className="relative overflow-hidden bg-gray-100" style={{ aspectRatio: '4/3' }}>
+          {!imgLoaded && (
+            <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 background-size-200" />
+          )}
+
+          <img
             src={imageUrl}
             alt={post.title}
-            className="w-full h-full object-cover"
+            onLoad={() => setImgLoaded(true)}
             onError={(e) => {
               e.target.onerror = null;
               e.target.src = '/placeholder.svg';
+              setImgLoaded(true);
             }}
-            whileHover={{ scale: 1.04 }}
-            transition={{ duration: 0.4, ease: 'easeOut' }}
+            loading="lazy"
+            decoding="async"
+            style={{
+              opacity: imgLoaded ? 1 : 0,
+              transition: 'opacity 400ms cubic-bezier(0.4, 0, 0.2, 1)',
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              transform: 'translateZ(0)',
+            }}
           />
 
           {/* Badge Container */}
@@ -59,7 +80,7 @@ const PostCard = ({ post }) => {
         </div>
 
         {/* Content */}
-        <div>
+        <div className="p-4">
           <h3 className="text-lg font-syne font-bold mb-2 text-ink-primary line-clamp-2">
             {post.title}
           </h3>
@@ -80,7 +101,7 @@ const PostCard = ({ post }) => {
           </div>
 
           {/* CTA */}
-          <div className="flex items-center text-accent text-sm font-medium group-hover:gap-2 gap-1 transition-all">
+          <div className="flex items-center text-accent text-sm font-medium gap-1 group-hover:text-ink-primary transition-colors">
             <span>View Details</span>
             <span>→</span>
           </div>
