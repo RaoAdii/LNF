@@ -4,8 +4,10 @@ import PostCard from '../components/PostCard';
 import SearchBar from '../components/SearchBar';
 import PageWrapper from '../components/PageWrapper';
 import { SkeletonGrid } from '../components/Skeleton';
-import { postAPI } from '../services/api';
+import { postAPI, getApiErrorMessage, isNetworkError } from '../services/api';
 import { toast } from 'react-toastify';
+
+const HOME_FETCH_ERROR_TOAST_ID = 'home-fetch-posts-error';
 
 // Demo posts for development/when no real posts exist
 const DEMO_POSTS = [
@@ -136,13 +138,18 @@ const Home = () => {
         setIsDemoMode(false);
       }
     } catch (error) {
-      // If backend is not running, show demo posts
-      if (error.message.includes('refused') || error.message.includes('Connection')) {
+      const isServerError = Number(error?.response?.status) >= 500;
+
+      // Keep Home usable in development when API/DB is unavailable.
+      if (isNetworkError(error) || (import.meta.env.DEV && isServerError)) {
         setPosts(filterDemoPosts(DEMO_POSTS, searchParams));
         setIsDemoMode(true);
       } else {
-        toast.error(error.response?.data?.message || 'Failed to fetch posts');
+        toast.error(getApiErrorMessage(error, 'Failed to fetch posts'), {
+          toastId: HOME_FETCH_ERROR_TOAST_ID,
+        });
         setPosts([]);
+        setIsDemoMode(false);
       }
     } finally {
       setIsLoading(false);

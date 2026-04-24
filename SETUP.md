@@ -27,7 +27,10 @@ MONGO_URI=your_mongodb_connection_string
 JWT_SECRET=replace_with_a_strong_random_value
 JWT_EXPIRES_IN=7d
 NODE_ENV=development
+DB_MAX_ATTEMPTS=3
+DB_RETRY_DELAY_MS=5000
 FRONTEND_URL=http://localhost:5173
+CORS_ORIGINS=
 ```
 
 Start API:
@@ -53,6 +56,8 @@ Optional `frontend/.env`:
 ```env
 VITE_API_URL=http://localhost:5000
 ```
+
+If frontend and backend are deployed on different domains, set `VITE_API_URL` to the backend public URL and configure backend `FRONTEND_URL`/`CORS_ORIGINS` accordingly.
 
 Expected: Vite serves app on port 5173.
 

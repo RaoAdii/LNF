@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { postAPI } from '../services/api';
+import { postAPI, getApiErrorMessage, resolveAssetUrl } from '../services/api';
 import { toast } from 'react-toastify';
 import PageWrapper from '../components/PageWrapper';
 import ConfirmModal from '../components/ConfirmModal';
 import { SkeletonPostList } from '../components/Skeleton';
 import { AuthContext } from '../context/AuthContext';
+
+const DASHBOARD_FETCH_ERROR_TOAST_ID = 'dashboard-fetch-posts-error';
 
 const Dashboard = () => {
   const [posts, setPosts] = useState([]);
@@ -25,7 +27,10 @@ const Dashboard = () => {
       const response = await postAPI.getMyPosts();
       setPosts(response.data.posts || []);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to fetch posts');
+      toast.error(getApiErrorMessage(error, 'Failed to fetch posts'), {
+        toastId: DASHBOARD_FETCH_ERROR_TOAST_ID,
+      });
+      setPosts([]);
     } finally {
       setIsLoading(false);
     }
@@ -114,9 +119,7 @@ const Dashboard = () => {
               <AnimatePresence mode="popLayout">
                 {posts.map((post, index) => {
               const isLost = post.type === 'lost';
-              const imageUrl = post.imageUrl
-                ? (post.imageUrl.startsWith('http') ? post.imageUrl : `http://localhost:5000${post.imageUrl}`)
-                : '/placeholder.svg';
+              const imageUrl = resolveAssetUrl(post.imageUrl);
 
               return (
                 <motion.div

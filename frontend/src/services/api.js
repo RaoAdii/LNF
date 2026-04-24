@@ -1,6 +1,21 @@
 import axios from 'axios';
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const normalizeBaseUrl = (url) => (url || '').trim().replace(/\/$/, '');
+
+const resolveDefaultApiBase = () => {
+  if (import.meta.env.DEV) {
+    return 'http://localhost:5000';
+  }
+
+  // In production, default to same-origin when VITE_API_URL is not provided.
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin;
+  }
+
+  return 'http://localhost:5000';
+};
+
+export const API_BASE_URL = normalizeBaseUrl(import.meta.env.VITE_API_URL) || resolveDefaultApiBase();
 const API_ROUTE = `${API_BASE_URL}/api`;
 
 const api = axios.create({
@@ -9,6 +24,33 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+export const isNetworkError = (error) =>
+  !error?.response && (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error');
+
+export const getApiErrorMessage = (error, fallbackMessage = 'Something went wrong') => {
+  if (error?.response?.data?.message) {
+    return error.response.data.message;
+  }
+
+  if (isNetworkError(error)) {
+    return 'Unable to connect to server. Please check your network and server status.';
+  }
+
+  return fallbackMessage;
+};
+
+export const resolveAssetUrl = (assetPath, fallback = '/placeholder.svg') => {
+  if (!assetPath) {
+    return fallback;
+  }
+
+  if (/^(https?:)?\/\//i.test(assetPath) || assetPath.startsWith('data:') || assetPath.startsWith('blob:')) {
+    return assetPath;
+  }
+
+  return `${API_BASE_URL}${assetPath.startsWith('/') ? '' : '/'}${assetPath}`;
+};
 
 // Interceptor to add JWT token to every request
 api.interceptors.request.use(

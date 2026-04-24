@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const mongoose = require('mongoose');
 const connectDB = require('./config/db');
 
 // Import routes
@@ -37,23 +38,54 @@ connectDB();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// CORS configuration for deployment
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:5174',
+// CORS configuration for local dev + production deployment
+const parseOrigins = (...originValues) => {
+  return originValues
+    .filter(Boolean)
+    .flatMap((value) => value.split(','))
+    .map((origin) => origin.trim().replace(/\/$/, ''))
+    .filter(Boolean);
+};
+
+const configuredOrigins = parseOrigins(
   process.env.FRONTEND_URL,
-].filter(Boolean);
+  process.env.CORS_ORIGINS
+);
+
+const defaultDevOrigins = ['http://localhost:5173', 'http://localhost:5174'];
+const allowedOrigins = new Set([...defaultDevOrigins, ...configuredOrigins]);
+
+const isLoopbackOrigin = (origin) =>
+  /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
+
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true;
+
+  const normalizedOrigin = origin.replace(/\/$/, '');
+
+  if (allowedOrigins.has(normalizedOrigin)) {
+    return true;
+  }
+
+  // In non-production, allow localhost on any port so Vite auto-port switching still works.
+  if (process.env.NODE_ENV !== 'production' && isLoopbackOrigin(normalizedOrigin)) {
+    return true;
+  }
+
+  return false;
+};
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (isAllowedOrigin(origin)) {
         callback(null, true);
       } else {
-        callback(new Error('Not allowed by CORS'));
+        callback(new Error(`Not allowed by CORS: ${origin}`));
       }
     },
     credentials: true,
+    optionsSuccessStatus: 200,
   })
 );
 
@@ -67,13 +99,30 @@ app.use('/api/messages', messageRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ message: 'Server is running' });
+  const connectionStates = {
+    0: 'disconnected',
+    1: 'connected',
+    2: 'connecting',
+    3: 'disconnecting',
+  };
+
+  const dbState = mongoose.connection.readyState;
+  const isHealthy = dbState === 1;
+
+  res.status(isHealthy ? 200 : 503).json({
+    message: isHealthy ? 'Server is running' : 'Server is running without database',
+    database: connectionStates[dbState] || 'unknown',
+  });
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ message: err.message || 'Internal server error' });
+
+  const isCorsError = typeof err.message === 'string' && err.message.startsWith('Not allowed by CORS');
+  const statusCode = isCorsError ? 403 : 500;
+
+  res.status(statusCode).json({ message: err.message || 'Internal server error' });
 });
 
 // 404 handler

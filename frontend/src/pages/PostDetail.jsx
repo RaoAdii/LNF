@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { postAPI } from '../services/api';
+import { postAPI, getApiErrorMessage, resolveAssetUrl } from '../services/api';
 import { toast } from 'react-toastify';
 import PageWrapper from '../components/PageWrapper';
 import MessageBox from '../components/MessageBox';
@@ -32,7 +32,7 @@ const PostDetail = () => {
       const response = await postAPI.getPostById(id);
       setPost(response.data.post);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to fetch post');
+      toast.error(getApiErrorMessage(error, 'Failed to fetch post'));
       navigate('/');
     } finally {
       setIsLoading(false);
@@ -74,7 +74,7 @@ const PostDetail = () => {
     (user._id === post.createdBy._id || user._id === post.createdBy);
   const canContact = user && !isOwner;
   const isLost = post.type === 'lost';
-  const imageUrl = post.imageUrl || '/placeholder.svg';
+  const imageUrl = resolveAssetUrl(post.imageUrl);
 
   return (
     <PageWrapper>

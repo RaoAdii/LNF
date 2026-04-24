@@ -4,7 +4,7 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-toastify';
-import { postAPI, API_BASE_URL } from '../services/api';
+import { postAPI, resolveAssetUrl } from '../services/api';
 import PageWrapper from '../components/PageWrapper';
 import FloatingLabelInput from '../components/FloatingLabelInput';
 
@@ -94,11 +94,7 @@ const EditPost = () => {
         image: null,
       });
       if (post.imageUrl) {
-        setCurrentImageUrl(
-          post.imageUrl.startsWith('http')
-            ? post.imageUrl
-            : `${API_BASE_URL}${post.imageUrl.startsWith('/') ? '' : '/'}${post.imageUrl}`
-        );
+        setCurrentImageUrl(resolveAssetUrl(post.imageUrl));
       }
     } catch (error) {
       if (error.response?.status === 403) {

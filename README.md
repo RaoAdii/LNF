@@ -67,6 +67,7 @@ npm run dev
 ```
 
 Frontend default URL: http://localhost:5173
+Note: Vite may auto-switch to another port if 5173 is busy.
 
 ## Environment Variables
 
@@ -78,14 +79,21 @@ MONGO_URI=your_mongodb_connection_string
 JWT_SECRET=replace_with_a_long_random_secret
 JWT_EXPIRES_IN=7d
 NODE_ENV=development
+DB_MAX_ATTEMPTS=3
+DB_RETRY_DELAY_MS=5000
 FRONTEND_URL=http://localhost:5173
+CORS_ORIGINS=
 ```
+
+`FRONTEND_URL` accepts one origin. Use `CORS_ORIGINS` for additional comma-separated origins in production.
 
 Optional frontend `.env`:
 
 ```env
 VITE_API_URL=http://localhost:5000
 ```
+
+In production, set `VITE_API_URL` to your backend public URL when frontend and backend are on different domains.
 
 ## API Surface (High Level)
 

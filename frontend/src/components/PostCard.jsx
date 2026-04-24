@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { resolveAssetUrl } from '../services/api';
 
 const PostCard = ({ post }) => {
   const isLost = post.type === 'lost';
-  const imageUrl = post.imageUrl || '/placeholder.svg';
+  const imageUrl = resolveAssetUrl(post.imageUrl);
   const [imgLoaded, setImgLoaded] = useState(false);
 
   useEffect(() => {
