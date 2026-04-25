@@ -4,6 +4,7 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-toastify';
+import { AlertTriangle, CheckCircle2, ImageIcon, X } from 'lucide-react';
 import { postAPI, resolveAssetUrl } from '../services/api';
 import PageWrapper from '../components/PageWrapper';
 import FloatingLabelInput from '../components/FloatingLabelInput';
@@ -195,8 +196,8 @@ const EditPost = () => {
               </label>
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { value: 'lost', icon: '⚠', label: 'Lost Item' },
-                  { value: 'found', icon: '✓', label: 'Found Item' },
+                  { value: 'lost', icon: <AlertTriangle size={28} />, label: 'Lost Item' },
+                  { value: 'found', icon: <CheckCircle2 size={28} />, label: 'Found Item' },
                 ].map((option) => (
                   <motion.button
                     key={option.value}
@@ -210,7 +211,7 @@ const EditPost = () => {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
-                    <div className="text-3xl mb-2">{option.icon}</div>
+                    <div className="text-3xl mb-2 flex items-center justify-center">{option.icon}</div>
                     <div className="font-syne font-bold text-ink-primary">
                       {option.label}
                     </div>
@@ -304,8 +305,9 @@ const EditPost = () => {
                     type="button"
                     onClick={() => setCurrentImageUrl(null)}
                     className="absolute top-3 right-3 btn btn-danger w-8 h-8 p-0 flex items-center justify-center text-sm"
+                    aria-label="Remove current image"
                   >
-                    ×
+                    <X size={14} />
                   </button>
                 </motion.div>
               )}
@@ -331,7 +333,9 @@ const EditPost = () => {
                     id="file-input"
                   />
                   <label htmlFor="file-input" className="cursor-pointer block">
-                    <div className="text-4xl mb-3">🖼️</div>
+                    <div className="text-4xl mb-3 inline-flex items-center justify-center">
+                      <ImageIcon size={34} />
+                    </div>
                     <p className="font-dm font-medium text-ink-primary mb-1">
                       Drop image here or click to browse
                     </p>
@@ -357,8 +361,9 @@ const EditPost = () => {
                     className="absolute top-3 right-3 btn btn-danger w-10 h-10 p-0 flex items-center justify-center text-sm"
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
+                    aria-label="Remove image preview"
                   >
-                    ×
+                    <X size={16} />
                   </motion.button>
                 </motion.div>
               ) : null}

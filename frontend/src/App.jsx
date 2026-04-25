@@ -18,6 +18,8 @@ import EditPost from './pages/EditPost';
 import PostDetail from './pages/PostDetail';
 import Messages from './pages/Messages';
 import NotFound from './pages/NotFound';
+import Profile from './pages/Profile';
+import AdminPanel from './pages/admin/AdminPanel';
 
 // Ambient orbs component
 const AmbientOrbs = React.memo(() => (
@@ -113,6 +115,22 @@ function AppRoutes() {
             element={
               <ProtectedRoute>
                 <Messages />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <AdminPanel />
               </ProtectedRoute>
             }
           />

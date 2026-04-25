@@ -1,13 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
+import { ArrowLeft, ArrowRight, Inbox, MessageCircleMore, MessageCircleX, SendHorizontal } from 'lucide-react';
 import { toast } from 'react-toastify';
 import PageWrapper from '../components/PageWrapper';
 import {
   getConversations,
   getThread,
   markThreadAsRead,
-  replyMessage,
 } from '../services/api';
+import { getSocket } from '../services/socket';
 
 function getAvatarColor(name) {
   const colors = [
@@ -39,6 +40,8 @@ function timeAgo(dateString) {
 
 const getConversationKey = (conversation) =>
   `${conversation?.otherUser?._id || ''}_${conversation?.postId?._id || ''}`;
+
+const normalizeId = (value) => String(value?._id || value || '');
 
 const hasConversationsChanged = (prev, next) => {
   if (prev.length !== next.length) return true;
@@ -117,11 +120,13 @@ const Messages = () => {
   const [isLoadingThread, setIsLoadingThread] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [mobileThreadOpen, setMobileThreadOpen] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
 
   const messagesEndRef = useRef(null);
   const isInitialLoad = useRef(true);
   const replyInputRef = useRef(null);
   const selectedConversationRef = useRef(null);
+  const typingTimerRef = useRef(null);
 
   const currentUser = useMemo(() => {
     try {
@@ -232,18 +237,111 @@ const Messages = () => {
   }, [selectedConversation, fetchThreadData]);
 
   useEffect(() => {
-    const pollingId = setInterval(() => {
+    return () => {
+      if (typingTimerRef.current) {
+        clearTimeout(typingTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handleNewMessage = (msg) => {
       const activeConversation = selectedConversationRef.current;
+      const senderId = normalizeId(msg?.senderId);
+      const receiverId = normalizeId(msg?.receiverId);
+      const postId = normalizeId(msg?.postId);
 
       if (activeConversation) {
-        fetchThreadData(activeConversation, true);
-      } else {
-        fetchConversationsData(true);
-      }
-    }, 3000);
+        const activeOtherUserId = String(activeConversation.otherUser?._id || '');
+        const activePostId = String(activeConversation.postId?._id || '');
+        const isActiveConversationMessage =
+          activePostId === postId &&
+          [senderId, receiverId].includes(currentUserId) &&
+          [senderId, receiverId].includes(activeOtherUserId);
 
-    return () => clearInterval(pollingId);
-  }, [fetchConversationsData, fetchThreadData]);
+        if (isActiveConversationMessage) {
+          setThreadMessages((previous) => {
+            if (previous.some((item) => String(item._id) === String(msg._id))) {
+              return previous;
+            }
+            return [...previous, msg];
+          });
+        }
+      }
+
+      setConversations((previous) =>
+        previous.map((conversation) => {
+          const otherUserId = String(conversation.otherUser?._id || '');
+          const conversationPostId = String(conversation.postId?._id || '');
+          const sameConversation =
+            conversationPostId === postId &&
+            [senderId, receiverId].includes(otherUserId) &&
+            [senderId, receiverId].includes(currentUserId);
+
+          if (!sameConversation) return conversation;
+
+          const isIncoming = senderId !== currentUserId;
+          const isActive =
+            selectedConversationRef.current &&
+            getConversationKey(selectedConversationRef.current) === getConversationKey(conversation);
+
+          return {
+            ...conversation,
+            lastMessage: {
+              messageText: msg.messageText,
+              createdAt: msg.createdAt,
+              senderId,
+            },
+            unreadCount: isIncoming && !isActive ? (conversation.unreadCount || 0) + 1 : 0,
+          };
+        })
+      );
+    };
+
+    const handleTypingIndicator = ({ userId, typing }) => {
+      const activeConversation = selectedConversationRef.current;
+      if (!activeConversation) return;
+      if (String(userId) !== String(activeConversation.otherUser?._id || '')) return;
+      setIsTyping(Boolean(typing));
+    };
+
+    const handleReadAck = () => {
+      setThreadMessages((previous) =>
+        previous.map((message) => ({ ...message, isRead: true }))
+      );
+    };
+
+    socket.on('message:new', handleNewMessage);
+    socket.on('typing:indicator', handleTypingIndicator);
+    socket.on('messages:read-ack', handleReadAck);
+
+    return () => {
+      socket.off('message:new', handleNewMessage);
+      socket.off('typing:indicator', handleTypingIndicator);
+      socket.off('messages:read-ack', handleReadAck);
+    };
+  }, [currentUserId]);
+
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket || !selectedConversation) return;
+
+    const otherUserId = selectedConversation.otherUser?._id;
+    const postId = selectedConversation.postId?._id;
+
+    if (!otherUserId || !postId) return;
+
+    socket.emit('conversation:join', { otherUserId, postId });
+    socket.emit('messages:read', { otherUserId, postId });
+
+    return () => {
+      socket.emit('conversation:leave', { otherUserId, postId });
+      socket.emit('typing:stop', { otherUserId, postId });
+    };
+  }, [selectedConversation?._id, selectedConversation?.otherUser?._id, selectedConversation?.postId?._id]);
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -279,6 +377,27 @@ const Messages = () => {
     const element = event.target;
     element.style.height = 'auto';
     element.style.height = `${Math.min(element.scrollHeight, 112)}px`;
+
+    const socket = getSocket();
+    if (!socket || !selectedConversation) {
+      return;
+    }
+
+    socket.emit('typing:start', {
+      otherUserId: selectedConversation.otherUser._id,
+      postId: selectedConversation.postId._id,
+    });
+
+    if (typingTimerRef.current) {
+      clearTimeout(typingTimerRef.current);
+    }
+
+    typingTimerRef.current = setTimeout(() => {
+      socket.emit('typing:stop', {
+        otherUserId: selectedConversation.otherUser._id,
+        postId: selectedConversation.postId._id,
+      });
+    }, 1500);
   };
 
   const handleSendReply = async () => {
@@ -291,39 +410,11 @@ const Messages = () => {
       return;
     }
 
-    const draft = replyText;
-    const tempId = `temp-${Date.now()}`;
-    const createdAt = new Date().toISOString();
-
-    const optimisticMessage = {
-      _id: tempId,
-      senderId: {
-        _id: currentUserId,
-        name: currentUser?.name || 'You',
-        email: currentUser?.email || '',
-      },
-      receiverId: selectedConversation.otherUser._id,
-      postId: selectedConversation.postId._id,
-      messageText: trimmedText,
-      isRead: true,
-      createdAt,
-    };
-
-    setThreadMessages((previous) => [...previous, optimisticMessage]);
-    setConversations((previous) =>
-      previous.map((item) =>
-        getConversationKey(item) === getConversationKey(selectedConversation)
-          ? {
-              ...item,
-              lastMessage: {
-                messageText: trimmedText,
-                createdAt,
-                senderId: currentUserId,
-              },
-            }
-          : item
-      )
-    );
+    const socket = getSocket();
+    if (!socket) {
+      toast.error('Realtime connection unavailable. Please login again.');
+      return;
+    }
 
     setReplyText('');
     if (replyInputRef.current) {
@@ -333,40 +424,17 @@ const Messages = () => {
     setIsSending(true);
 
     try {
-      const response = await replyMessage({
+      socket.emit('message:send', {
         receiverId: selectedConversation.otherUser._id,
         postId: selectedConversation.postId._id,
         messageText: trimmedText,
       });
 
-      const savedMessage = response.data?.data;
-      if (savedMessage) {
-        setThreadMessages((previous) =>
-          previous.map((item) =>
-            item._id === tempId ? savedMessage : item
-          )
-        );
-
-        setConversations((previous) =>
-          previous.map((item) =>
-            getConversationKey(item) === getConversationKey(selectedConversation)
-              ? {
-                  ...item,
-                  lastMessage: {
-                    messageText: savedMessage.messageText,
-                    createdAt: savedMessage.createdAt,
-                    senderId: savedMessage.senderId?._id || currentUserId,
-                  },
-                }
-              : item
-          )
-        );
-      }
-
-      fetchConversationsData(true);
+      socket.emit('typing:stop', {
+        otherUserId: selectedConversation.otherUser._id,
+        postId: selectedConversation.postId._id,
+      });
     } catch (error) {
-      setThreadMessages((previous) => previous.filter((item) => item._id !== tempId));
-      setReplyText(draft);
       toast.error(error.response?.data?.message || 'Failed to send message');
     } finally {
       setIsSending(false);
@@ -426,7 +494,9 @@ const Messages = () => {
                   ) : conversations.length === 0 ? (
                     <div className="h-full flex items-center justify-center px-4 text-center">
                       <div>
-                        <div className="text-4xl mb-3">📭</div>
+                        <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-accent-soft mb-3">
+                          <Inbox size={24} className="text-accent" />
+                        </div>
                         <p className="text-sm font-dm text-ink-primary mb-1">No conversations yet</p>
                         <p className="text-xs font-dm text-ink-muted leading-relaxed">
                           When someone messages you or you contact a post owner,
@@ -499,7 +569,9 @@ const Messages = () => {
               {!selectedConversation ? (
                 <div className="h-full flex items-center justify-center text-center px-6">
                   <div>
-                    <div className="text-5xl mb-3">💬</div>
+                    <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-accent-soft mb-3">
+                      <MessageCircleMore size={24} className="text-accent" />
+                    </div>
                     <p className="text-base font-dm text-ink-primary">Select a conversation to start chatting</p>
                   </div>
                 </div>
@@ -512,7 +584,10 @@ const Messages = () => {
                         className="md:hidden text-sm px-2 py-1 rounded-md border border-black/10 text-ink-secondary"
                         onClick={() => setMobileThreadOpen(false)}
                       >
-                        ← Back
+                        <span className="inline-flex items-center gap-1">
+                          <ArrowLeft size={14} />
+                          <span>Back</span>
+                        </span>
                       </button>
 
                       <div
@@ -552,7 +627,9 @@ const Messages = () => {
                     ) : threadMessages.length === 0 ? (
                       <div className="h-full flex items-center justify-center text-center">
                         <div>
-                          <div className="text-4xl mb-2">🫧</div>
+                          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-accent-soft mb-2">
+                            <MessageCircleX size={24} className="text-accent" />
+                          </div>
                           <p className="text-sm font-dm text-ink-secondary">No messages in this thread yet</p>
                         </div>
                       </div>
@@ -593,7 +670,7 @@ const Messages = () => {
                                       isMine
                                         ? 'bg-[#0f0f12] text-white'
                                         : 'bg-white/85 text-ink-primary border border-black/10'
-                                    }`}
+                                    } message-bubble`}
                                     style={{
                                       borderRadius: isMine ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
                                     }}
@@ -609,6 +686,19 @@ const Messages = () => {
                             </React.Fragment>
                           );
                         })}
+                        {isTyping && (
+                          <div
+                            className="typing-indicator"
+                            style={{
+                              padding: '8px 16px',
+                              color: 'var(--ink-muted)',
+                              fontSize: '0.8rem',
+                              fontStyle: 'italic',
+                            }}
+                          >
+                            Typing...
+                          </div>
+                        )}
                         <div ref={messagesEndRef} />
                       </div>
                     )}
@@ -632,7 +722,14 @@ const Messages = () => {
                         disabled={isSending || !replyText.trim()}
                         className="h-[44px] px-4 rounded-full bg-[#0f0f12] text-white text-sm font-dm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {isSending ? '...' : '→'}
+                        {isSending ? (
+                          '...'
+                        ) : (
+                          <span className="inline-flex items-center gap-1">
+                            <SendHorizontal size={15} />
+                            <ArrowRight size={14} />
+                          </span>
+                        )}
                       </button>
                     </div>
                   </div>

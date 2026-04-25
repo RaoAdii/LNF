@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { AlertTriangle, ArrowLeft, CalendarDays, CheckCircle2, Mail, MapPin, XCircle } from 'lucide-react';
 import { postAPI, getApiErrorMessage, resolveAssetUrl } from '../services/api';
 import { toast } from 'react-toastify';
 import PageWrapper from '../components/PageWrapper';
@@ -63,7 +64,9 @@ const PostDetail = () => {
     return (
       <PageWrapper>
         <div className="container-lg px-6 py-12 text-center">
-          <div className="text-6xl mb-4">❌</div>
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-accent-soft mb-4">
+            <XCircle size={30} className="text-accent" />
+          </div>
           <h2 className="text-2xl font-syne font-bold text-ink-primary">Post not found</h2>
         </div>
       </PageWrapper>
@@ -77,7 +80,7 @@ const PostDetail = () => {
   const imageUrl = resolveAssetUrl(post.imageUrl);
 
   return (
-    <PageWrapper>
+    <PageWrapper className="page-enter">
       <div className="container-lg px-6 py-12">
         {/* Back Button */}
         <motion.button
@@ -85,7 +88,8 @@ const PostDetail = () => {
           className="flex items-center gap-2 text-accent hover:text-ink-primary mb-8 transition-colors"
           whileHover={{ x: -4 }}
         >
-          ← Back
+          <ArrowLeft size={16} />
+          <span>Back</span>
         </motion.button>
 
         {/* Two Column Layout */}
@@ -128,7 +132,16 @@ const PostDetail = () => {
                 {/* Badge Overlay */}
                 <div className="absolute top-4 left-4 flex gap-2">
                   <div className={`badge ${isLost ? 'badge-lost' : 'badge-found'} ${isLost && post.status !== 'resolved' ? 'pulse' : ''}`}>
-                    {post.status === 'resolved' ? '✓ Resolved' : (isLost ? '⚠ Lost' : '✓ Found')}
+                    <span className="inline-flex items-center gap-1">
+                      {post.status === 'resolved' ? (
+                        <CheckCircle2 size={14} />
+                      ) : isLost ? (
+                        <AlertTriangle size={14} />
+                      ) : (
+                        <CheckCircle2 size={14} />
+                      )}
+                      <span>{post.status === 'resolved' ? 'Resolved' : isLost ? 'Lost' : 'Found'}</span>
+                    </span>
                   </div>
                 </div>
               </div>
@@ -146,11 +159,11 @@ const PostDetail = () => {
 
               <div className="space-y-3 text-ink-secondary mb-6">
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">📍</span>
+                  <MapPin size={22} />
                   <span className="font-dm">{post.location}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">📅</span>
+                  <CalendarDays size={22} />
                   <span className="font-dm">{new Date(post.createdAt).toLocaleDateString()}</span>
                 </div>
               </div>
@@ -195,7 +208,10 @@ const PostDetail = () => {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.97 }}
                 >
-                  📬 Contact Owner
+                  <span className="inline-flex items-center justify-center gap-2">
+                    <Mail size={16} />
+                    <span>Contact Owner</span>
+                  </span>
                 </motion.button>
 
                 {/* Message Form */}

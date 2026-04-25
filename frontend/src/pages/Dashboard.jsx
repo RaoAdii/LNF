@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
+import { CheckCircle2, CirclePlus, Inbox, MapPin, Clock3 } from 'lucide-react';
 import { postAPI, getApiErrorMessage, resolveAssetUrl } from '../services/api';
 import { toast } from 'react-toastify';
 import PageWrapper from '../components/PageWrapper';
@@ -81,7 +82,10 @@ const Dashboard = () => {
           </div>
 
           <Link to="/create-post" className="btn btn-primary hidden sm:block">
-            + New Post
+            <span className="inline-flex items-center gap-2">
+              <CirclePlus size={16} />
+              <span>New Post</span>
+            </span>
           </Link>
         </motion.div>
 
@@ -96,7 +100,9 @@ const Dashboard = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <div className="text-6xl mb-4">📭</div>
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-accent-soft mb-4">
+              <Inbox size={30} className="text-accent" />
+            </div>
             <h3 className="text-xl font-semibold text-ink-primary mb-2">
               No posts yet
             </h3>
@@ -161,13 +167,20 @@ const Dashboard = () => {
                       </h3>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-ink-muted">
-                      <span>📍 {post.location}</span>
+                      <span className="inline-flex items-center gap-1">
+                        <MapPin size={13} />
+                        <span>{post.location}</span>
+                      </span>
                       <span>•</span>
-                      <span>🕐 {new Date(post.createdAt).toLocaleDateString()}</span>
+                      <span className="inline-flex items-center gap-1">
+                        <Clock3 size={13} />
+                        <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+                      </span>
                     </div>
                     {post.status === 'resolved' && (
-                      <div className="text-xs text-found-color font-dm font-medium mt-1">
-                        ✓ Resolved
+                      <div className="text-xs text-found-color font-dm font-medium mt-1 inline-flex items-center gap-1">
+                        <CheckCircle2 size={13} />
+                        <span>Resolved</span>
                       </div>
                     )}
                   </div>
@@ -206,9 +219,9 @@ const Dashboard = () => {
         {/* Mobile Floating Action */}
         <Link
           to="/create-post"
-          className="fixed bottom-6 right-6 w-16 h-16 rounded-full bg-accent text-white flex items-center justify-center shadow-lg hover:shadow-xl transition-transform hover:scale-110 sm:hidden font-bold text-2xl"
+          className="fixed bottom-6 right-6 w-16 h-16 rounded-full bg-accent text-white flex items-center justify-center shadow-lg hover:shadow-xl transition-transform hover:scale-110 sm:hidden"
         >
-          +
+          <CirclePlus size={28} />
         </Link>
 
         {/* Delete Confirmation */}

@@ -3,6 +3,8 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AuthContext } from '../context/AuthContext';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -22,8 +24,13 @@ const Navbar = () => {
   if (isAuthenticated) {
     navLinks.push(
       { href: '/my-posts', label: 'My Posts' },
-      { href: '/messages', label: 'Messages' }
+      { href: '/messages', label: 'Messages' },
+      { href: '/profile', label: 'My Profile' }
     );
+
+    if (user?.role === 'admin') {
+      navLinks.push({ href: '/admin', label: 'Admin Panel' });
+    }
   }
 
   const isActive = (path) => location.pathname === path;
@@ -103,6 +110,17 @@ const Navbar = () => {
           <div className="hidden md:flex items-center gap-3">
             {isAuthenticated ? (
               <>
+                <div className="w-8 h-8 rounded-full overflow-hidden border border-black/10 flex items-center justify-center bg-accent-soft text-accent text-sm font-semibold">
+                  {user?.avatar ? (
+                    <img
+                      src={`${API_URL}/uploads/avatars/${user.avatar}`}
+                      alt="avatar"
+                      style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <span>{user?.name?.[0]?.toUpperCase() || 'U'}</span>
+                  )}
+                </div>
                 <Link
                   to="/create-post"
                   className="btn btn-primary text-sm"

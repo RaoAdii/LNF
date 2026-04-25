@@ -30,7 +30,7 @@ export default function PageWrapper({ children, className = '' }) {
       animate="animate"
       exit="exit"
       style={{ willChange: 'opacity, transform', transform: 'translateZ(0)' }}
-      className={className}
+      className={`page-enter ${className}`.trim()}
     >
       {children}
     </motion.div>

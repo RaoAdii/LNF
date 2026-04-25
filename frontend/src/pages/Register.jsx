@@ -4,15 +4,19 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
+import { Eye, EyeOff } from 'lucide-react';
 import { authAPI } from '../services/api';
+import PageWrapper from '../components/PageWrapper';
 import { useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import PageWrapper from '../components/PageWrapper';
 
 const validationSchema = Yup.object().shape({
   name: Yup.string()
     .min(2, 'Name must be at least 2 characters')
     .required('Name is required'),
+  role: Yup.string()
+    .oneOf(['user', 'admin'], 'Please select a valid role')
+    .required('Role is required'),
   email: Yup.string()
     .email('Invalid email address')
     .required('Email is required'),
@@ -46,6 +50,7 @@ const Register = () => {
   const formik = useFormik({
     initialValues: {
       name: '',
+      role: 'user',
       email: '',
       password: '',
       confirmPassword: '',
@@ -57,14 +62,15 @@ const Register = () => {
       try {
         const response = await authAPI.register({
           name: values.name,
+          role: values.role,
           email: values.email,
           password: values.password,
           confirmPassword: values.confirmPassword,
         });
 
-        login(response.data.user, response.data.token);
-        toast.success('Registration successful!');
-        navigate('/');
+        login(response.data.token, response.data.user);
+        toast.success(response.data?.message || 'Account created successfully.');
+        navigate('/', { replace: true });
       } catch (error) {
         setHasError(true);
         toast.error(error.response?.data?.message || 'Registration failed');
@@ -177,6 +183,38 @@ const Register = () => {
               )}
             </div>
 
+            {/* Role */}
+            <div className="input-wrapper">
+              <p className="text-xs font-medium text-ink-secondary mb-2">Register as</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => formik.setFieldValue('role', 'user')}
+                  className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                    formik.values.role === 'user'
+                      ? 'border-accent bg-accent/10 text-accent'
+                      : 'border-border text-ink-secondary hover:border-accent/50'
+                  }`}
+                >
+                  User
+                </button>
+                <button
+                  type="button"
+                  onClick={() => formik.setFieldValue('role', 'admin')}
+                  className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                    formik.values.role === 'admin'
+                      ? 'border-accent bg-accent/10 text-accent'
+                      : 'border-border text-ink-secondary hover:border-accent/50'
+                  }`}
+                >
+                  Admin
+                </button>
+              </div>
+              {formik.touched.role && formik.errors.role && (
+                <p className="text-lost-color text-xs mt-2">{formik.errors.role}</p>
+              )}
+            </div>
+
             {/* Password */}
             <div className="input-wrapper">
               <div className="relative">
@@ -196,8 +234,9 @@ const Register = () => {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-ink-muted hover:text-accent transition-colors"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
-                  {showPassword ? '👁️' : '👁️‍🗨️'}
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
                 <label className="input-label">Password</label>
               </div>
@@ -240,8 +279,9 @@ const Register = () => {
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-ink-muted hover:text-accent transition-colors"
+                  aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
                 >
-                  {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
+                  {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
                 <label className="input-label">Confirm Password</label>
               </div>

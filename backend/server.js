@@ -1,15 +1,21 @@
 require('dotenv').config();
 const express = require('express');
+const { createServer } = require('http');
+const { Server: SocketIO } = require('socket.io');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
 const connectDB = require('./config/db');
+const User = require('./models/User');
+const Message = require('./models/Message');
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
 const postRoutes = require('./routes/postRoutes');
 const messageRoutes = require('./routes/messageRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 
@@ -91,11 +97,13 @@ app.use(
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads/avatars', express.static(path.join(__dirname, 'uploads', 'avatars')));
 
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -132,7 +140,134 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-const server = app.listen(PORT, () => {
+const httpServer = createServer(app);
+
+const io = new SocketIO(httpServer, {
+  cors: {
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+  transports: ['websocket'],
+});
+
+const onlineUsers = new Map();
+
+const buildRoomKey = (leftUserId, rightUserId, postId) =>
+  [String(leftUserId), String(rightUserId)].sort().join('-') + ':' + String(postId);
+
+io.use(async (socket, next) => {
+  try {
+    const token = socket.handshake.auth?.token;
+    if (!token) return next(new Error('Authentication required.'));
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).select('_id name isBanned').lean();
+    if (!user || user.isBanned) return next(new Error('Access denied.'));
+
+    socket.userId = String(user._id);
+    socket.userName = user.name;
+    next();
+  } catch (_error) {
+    next(new Error('Invalid token.'));
+  }
+});
+
+io.on('connection', (socket) => {
+  const uid = socket.userId;
+
+  if (!onlineUsers.has(uid)) onlineUsers.set(uid, new Set());
+  onlineUsers.get(uid).add(socket.id);
+  io.emit('presence:update', { userId: uid, online: true });
+
+  socket.on('conversation:join', ({ otherUserId, postId }) => {
+    if (!otherUserId || !postId) return;
+    const roomKey = buildRoomKey(uid, otherUserId, postId);
+    socket.join(roomKey);
+    socket.currentRoom = roomKey;
+  });
+
+  socket.on('conversation:leave', ({ otherUserId, postId }) => {
+    if (!otherUserId || !postId) return;
+    const roomKey = buildRoomKey(uid, otherUserId, postId);
+    socket.leave(roomKey);
+  });
+
+  socket.on('message:send', async ({ receiverId, postId, messageText }) => {
+    try {
+      const normalizedText = String(messageText || '').trim();
+      if (!receiverId || !postId || !normalizedText) return;
+      if (normalizedText.length > 2000) return;
+
+      const message = await Message.create({
+        senderId: uid,
+        receiverId,
+        postId,
+        messageText: normalizedText,
+      });
+
+      const populated = await Message.findById(message._id)
+        .populate('senderId', 'name avatar')
+        .populate('receiverId', 'name avatar')
+        .lean();
+
+      const roomKey = buildRoomKey(uid, receiverId, postId);
+      io.to(roomKey).emit('message:new', populated);
+
+      const receiverSockets = onlineUsers.get(String(receiverId));
+      if (receiverSockets) {
+        for (const sid of receiverSockets) {
+          io.to(sid).emit('notification:message', {
+            fromName: socket.userName,
+            postId,
+            messageId: message._id,
+          });
+        }
+      }
+    } catch (err) {
+      socket.emit('message:error', { message: 'Failed to send message.' });
+      console.error('[socket message:send]', err.message);
+    }
+  });
+
+  socket.on('typing:start', ({ otherUserId, postId }) => {
+    if (!otherUserId || !postId) return;
+    const roomKey = buildRoomKey(uid, otherUserId, postId);
+    socket.to(roomKey).emit('typing:indicator', { userId: uid, typing: true });
+  });
+
+  socket.on('typing:stop', ({ otherUserId, postId }) => {
+    if (!otherUserId || !postId) return;
+    const roomKey = buildRoomKey(uid, otherUserId, postId);
+    socket.to(roomKey).emit('typing:indicator', { userId: uid, typing: false });
+  });
+
+  socket.on('messages:read', async ({ otherUserId, postId }) => {
+    try {
+      if (!otherUserId || !postId) return;
+
+      await Message.updateMany(
+        { senderId: otherUserId, receiverId: uid, postId, isRead: false },
+        { $set: { isRead: true, readAt: new Date() } }
+      );
+
+      const roomKey = buildRoomKey(uid, otherUserId, postId);
+      socket.to(roomKey).emit('messages:read-ack', { byUserId: uid, postId });
+    } catch (err) {
+      console.error('[socket messages:read]', err.message);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    onlineUsers.get(uid)?.delete(socket.id);
+    if (onlineUsers.get(uid)?.size === 0) {
+      onlineUsers.delete(uid);
+      io.emit('presence:update', { userId: uid, online: false });
+    }
+  });
+});
+
+const server = httpServer.listen(PORT, () => {
   console.log(`\n${'='.repeat(60)}`);
   console.log(`🚀 Lost & Found Hub - Backend Server`);
   console.log(`${'='.repeat(60)}`);
@@ -144,6 +279,7 @@ const server = app.listen(PORT, () => {
   console.log(`   POST   /api/auth/register`);
   console.log(`   POST   /api/auth/login`);
   console.log(`   GET    /api/auth/profile`);
+  console.log(`   GET    /api/admin/stats`);
   console.log(`   GET    /api/posts`);
   console.log(`   GET    /api/posts/:id`);
   console.log(`   POST   /api/posts`);
@@ -178,3 +314,5 @@ process.on('SIGINT', () => {
     process.exit(0);
   });
 });
+
+module.exports = { io };

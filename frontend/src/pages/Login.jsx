@@ -4,6 +4,7 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
+import { Eye, EyeOff } from 'lucide-react';
 import { authAPI } from '../services/api';
 import { useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
@@ -40,7 +41,7 @@ const Login = () => {
       setHasError(false);
       try {
         const response = await authAPI.login(values);
-        login(response.data.user, response.data.token);
+        login(response.data.token, response.data.user);
         toast.success('Login successful!');
         navigate(from, { replace: true });
       } catch (error) {
@@ -138,8 +139,9 @@ const Login = () => {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-ink-muted hover:text-accent transition-colors"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
-                  {showPassword ? '👁️' : '👁️‍🗨️'}
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
                 <label className="input-label">Password</label>
               </div>

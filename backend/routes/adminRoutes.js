@@ -1,0 +1,24 @@
+const express = require('express');
+const authMiddleware = require('../middleware/authMiddleware');
+const { adminMiddleware } = require('../middleware/adminMiddleware');
+const {
+  getStats,
+  getAllUsers,
+  getAllPosts,
+  deletePost,
+  toggleBanUser,
+  toggleAdminRole,
+} = require('../controllers/adminController');
+
+const router = express.Router();
+
+router.use(authMiddleware, adminMiddleware);
+
+router.get('/stats', getStats);
+router.get('/users', getAllUsers);
+router.get('/posts', getAllPosts);
+router.delete('/posts/:id', deletePost);
+router.patch('/users/:id/ban', toggleBanUser);
+router.patch('/users/:id/promote', toggleAdminRole);
+
+module.exports = router;

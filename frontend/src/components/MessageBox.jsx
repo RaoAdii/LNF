@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
+import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { messageAPI } from '../services/api';
 
 const MessageBox = ({ postId, recipientId }) => {
@@ -61,14 +62,16 @@ const MessageBox = ({ postId, recipientId }) => {
         <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-4">
           <p className="text-sm font-dm font-medium text-emerald-700">
             {isSuccess
-              ? '✓ Message sent! Go to Messages to continue the conversation.'
-              : "You've already sent a message. View conversation →"}
+              ? 'Message sent. Go to Messages to continue the conversation.'
+              : "You've already sent a message. View conversation."}
           </p>
           <Link
             to="/messages"
             className="inline-flex items-center mt-3 text-sm font-dm font-medium text-emerald-700 hover:underline"
           >
-            View Conversation →
+            <CheckCircle2 size={14} className="mr-1" />
+            <span>View Conversation</span>
+            <ArrowRight size={14} className="ml-1" />
           </Link>
         </div>
       ) : (

@@ -2,11 +2,30 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN,
+const generateToken = (id, role) => {
+  return jwt.sign({ id, role }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   });
 };
+
+const buildAuthPayload = (user, token) => ({
+  success: true,
+  token,
+  user: {
+    id: user._id,
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    phone: user.phone,
+    flatNumber: user.flatNumber,
+    block: user.block,
+    avatar: user.avatar,
+    isVerified: user.isVerified,
+    lastLoginAt: user.lastLoginAt,
+    loginCount: user.loginCount,
+  },
+});
 
 exports.register = async (req, res) => {
   const errors = validationResult(req);
@@ -14,40 +33,38 @@ exports.register = async (req, res) => {
     return res.status(400).json({ message: errors.array()[0].msg });
   }
 
-  const { name, email, password, confirmPassword } = req.body;
-
-  if (password !== confirmPassword) {
-    return res.status(400).json({ message: 'Passwords do not match' });
-  }
+  const { name, email, password, role } = req.body;
 
   try {
-    let user = await User.findOne({ email });
-    if (user) {
-      return res.status(400).json({ message: 'User already exists' });
+    const normalizedEmail = String(email || '').toLowerCase().trim();
+    const normalizedRole = String(role || 'user').toLowerCase().trim();
+
+    if (!['user', 'admin'].includes(normalizedRole)) {
+      return res.status(400).json({ success: false, message: 'Role must be user or admin.' });
     }
 
-    user = new User({
-      name,
-      email,
+    const exists = await User.findOne({ email: normalizedEmail });
+    if (exists) {
+      return res.status(409).json({ success: false, message: 'Email already registered.' });
+    }
+
+    const user = await User.create({
+      name: String(name || '').trim(),
+      email: normalizedEmail,
       password,
+      role: normalizedRole,
+      isVerified: true,
     });
 
-    await user.save();
+    const token = generateToken(user._id, user.role);
 
-    const token = generateToken(user._id);
-
-    res.status(201).json({
-      message: 'User registered successfully',
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-      },
+    return res.status(201).json({
+      ...buildAuthPayload(user, token),
+      message: 'Account created successfully.',
     });
   } catch (error) {
     console.error('Register error:', error.message);
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({ message: error.message });
   }
 };
 
@@ -60,9 +77,15 @@ exports.login = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const user = await User.findOne({ email }).select('+password');
+    const normalizedEmail = String(email || '').toLowerCase().trim();
+    const user = await User.findOne({ email: normalizedEmail }).select('+password');
+
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    if (user.isBanned) {
+      return res.status(403).json({ message: 'Account suspended.' });
     }
 
     const isMatch = await user.matchPassword(password);
@@ -70,38 +93,84 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    const token = generateToken(user._id);
+    const now = new Date();
+    const loginIp = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || req.ip || '')
+      .split(',')[0]
+      .trim();
 
-    res.status(200).json({
-      message: 'User logged in successfully',
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
+    const updatedUser = await User.findByIdAndUpdate(
+      user._id,
+      {
+        $set: {
+          isVerified: true,
+          lastLoginAt: now,
+          lastLoginIp: loginIp,
+        },
+        $inc: { loginCount: 1 },
       },
+      { new: true }
+    );
+
+    const token = generateToken(updatedUser._id, updatedUser.role);
+
+    return res.status(200).json({
+      ...buildAuthPayload(updatedUser, token),
+      message: 'User logged in successfully',
     });
   } catch (error) {
     console.error('Login error:', error.message);
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+exports.updateProfile = async (req, res, next) => {
+  try {
+    const { name, phone, flatNumber, block } = req.body;
+    const updates = {};
+
+    if (name) updates.name = String(name).trim();
+    if (phone) updates.phone = String(phone).trim();
+    if (flatNumber) updates.flatNumber = String(flatNumber).trim();
+    if (block) updates.block = String(block).trim();
+    if (req.file) updates.avatar = req.file.filename;
+
+    const updated = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    res.json({ success: true, user: updated });
+  } catch (err) {
+    next(err);
   }
 };
 
 exports.getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id).select('-password');
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
+      success: true,
       user: {
         id: user._id,
+        _id: user._id,
         name: user.name,
         email: user.email,
+        role: user.role,
+        phone: user.phone,
+        flatNumber: user.flatNumber,
+        block: user.block,
+        avatar: user.avatar,
+        isVerified: user.isVerified,
+        lastLoginAt: user.lastLoginAt,
+        loginCount: user.loginCount,
       },
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({ message: error.message });
   }
 };

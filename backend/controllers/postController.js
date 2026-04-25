@@ -76,7 +76,7 @@ exports.createPost = async (req, res) => {
 
     let imageUrl = null;
     if (req.file) {
-      imageUrl = req.file.path;
+      imageUrl = `/uploads/posts/${req.file.filename}`;
     }
 
     const post = new Post({
@@ -139,7 +139,7 @@ exports.updatePost = async (req, res) => {
     }
 
     if (req.file) {
-      post.imageUrl = req.file.path;
+      post.imageUrl = `/uploads/posts/${req.file.filename}`;
     }
 
     await post.save();

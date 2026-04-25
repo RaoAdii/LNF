@@ -182,7 +182,7 @@ exports.getThread = async (req, res) => {
         postId,
         isRead: false,
       },
-      { $set: { isRead: true } }
+      { $set: { isRead: true, readAt: new Date() } }
     );
 
     const threadMessages = await Message.find({
@@ -249,7 +249,7 @@ exports.markAsRead = async (req, res) => {
         postId,
         isRead: false,
       },
-      { $set: { isRead: true } }
+      { $set: { isRead: true, readAt: new Date() } }
     );
 
     res.status(200).json({

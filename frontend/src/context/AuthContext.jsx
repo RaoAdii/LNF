@@ -1,4 +1,5 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { connectSocket, disconnectSocket } from '../services/socket';
 
 export const AuthContext = createContext();
 
@@ -15,15 +16,22 @@ export const AuthProvider = ({ children }) => {
     if (storedToken && storedUser) {
       setToken(storedToken);
       setUser(JSON.parse(storedUser));
+      connectSocket(storedToken);
     }
     setIsLoading(false);
   }, []);
 
-  const login = (userData, authToken) => {
+  const login = (authToken, userData) => {
     setUser(userData);
     setToken(authToken);
     localStorage.setItem('token', authToken);
     localStorage.setItem('user', JSON.stringify(userData));
+    connectSocket(authToken);
+  };
+
+  const updateUser = (updatedUser) => {
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
   const logout = () => {
@@ -31,6 +39,7 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    disconnectSocket();
   };
 
   const value = {
@@ -39,6 +48,7 @@ export const AuthProvider = ({ children }) => {
     isLoading,
     isAuthenticated: !!token,
     login,
+    updateUser,
     logout,
   };
 
@@ -48,3 +58,5 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
+
+export const useAuth = () => useContext(AuthContext);

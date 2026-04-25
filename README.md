@@ -83,9 +83,20 @@ DB_MAX_ATTEMPTS=3
 DB_RETRY_DELAY_MS=5000
 FRONTEND_URL=http://localhost:5173
 CORS_ORIGINS=
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-gmail@gmail.com
+SMTP_PASS=your-gmail-app-password
+FROM_EMAIL=your-gmail@gmail.com
+OTP_EXPIRES_MINUTES=10
+APP_NAME=LostHub
 ```
 
 `FRONTEND_URL` accepts one origin. Use `CORS_ORIGINS` for additional comma-separated origins in production.
+
+Gmail App Password setup:
+Go to Google Account -> Security -> 2-Step Verification -> App Passwords -> create one for "Mail".
+Use that 16-character password as `SMTP_PASS`. Never use your actual Gmail password.
 
 Optional frontend `.env`:
 
