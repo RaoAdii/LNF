@@ -1,54 +1,84 @@
-# LNF - Lost and Found Hub
+# LNF - Lost & Found Hub
 
-LNF is a MERN application built for residential communities to report lost/found items, connect owners with finders, and continue communication through threaded in-app messaging.
+LNF is a full-stack community Lost & Found application built with React, Node.js, Express, and MongoDB.
+It supports authenticated posting, search/filter, realtime messaging, profile management, and admin moderation.
 
-This repository is maintained as a practical, deployment-ready codebase with clear separation between API, UI, and operational documentation.
+## Current Status
 
-## What The App Solves
+This codebase is actively maintained and production-oriented with:
+- Dark, token-based UI system across pages
+- DotGrid interactive landing hero background
+- JWT auth + protected routes
+- Realtime messaging over Socket.IO with API fallback
+- Admin console for users and listings
+- Automatic default admin seeding on backend startup
 
-- Residents can post lost or found items with photos.
-- Community members can search by keyword, type, and category.
-- Post owners can manage lifecycle states (open/resolved) and edits.
-- Users can contact each other about a specific post and continue the conversation in a chat thread.
-
-## Current Stack
-
-### Backend
-- Node.js + Express
-- MongoDB + Mongoose
-- JWT auth + bcrypt password hashing
-- Multer image uploads
-- express-validator request validation
+## Tech Stack
 
 ### Frontend
 - React 18 + Vite
 - React Router 6
-- Axios with auth interceptors
-- Formik + Yup forms/validation
-- Tailwind CSS + custom token-based design system
-- Framer Motion transitions and interaction animations
+- Tailwind CSS + custom design tokens
+- Framer Motion
+- Axios
+- Formik + Yup
+- Socket.IO client
+- GSAP (DotGrid interaction)
 
-## Core Capabilities
+### Backend
+- Node.js + Express
+- MongoDB + Mongoose
+- JWT + bcrypt
+- Multer uploads (disk storage)
+- Socket.IO server
+- express-validator
+- CORS + compression
 
-- Authentication: register/login/profile with protected routes
-- Posts: create, read, update, delete, mark resolved
-- Uploads: image storage and static file serving
-- Search/filter: live query across post fields
-- Messaging:
-  - conversation list grouped by user + post
-  - full thread view
-  - reply inside thread
-  - unread tracking
-  - polling refresh every 3 seconds
+## Core Features
 
-## Local Development
+- Authentication
+  - Register, login, and profile fetch
+  - Profile update (name/contact fields + avatar upload)
+  - Role-aware protected routes (user/admin)
 
-### Prerequisites
-- Node.js 18+ recommended
-- npm 9+
-- MongoDB Atlas (or local MongoDB)
+- Listings
+  - Create, edit, delete lost/found posts
+  - Category + status support (`open`, `resolved`)
+  - Feed search and filtering (query/type/category)
+  - Pagination metadata and feed summary counts
 
-### 1) Backend
+- Messaging
+  - Conversation list grouped by `otherUser + post`
+  - Thread view with date separators and read tracking
+  - Realtime send/read/typing via websockets
+  - API fallback mode when socket is disconnected
+
+- Admin Console
+  - Platform stats
+  - Ban/unban users
+  - Promote/demote admin role
+  - Toggle listing type/status
+  - Delete listings
+
+## Default Admin Seeding
+
+On backend boot, a default admin account is auto-created/synced.
+
+Default credentials (if not overridden):
+- Email: `admin@lnf.local`
+- Password: `Admin@123456`
+
+Override with env vars:
+- `ADMIN_TEST_NAME`
+- `ADMIN_TEST_EMAIL`
+- `ADMIN_TEST_PASSWORD`
+- `ADMIN_RESET_PASSWORD_ON_BOOT`
+
+Note: Use strong custom values in production.
+
+## Quick Start
+
+### 1. Backend
 
 ```bash
 cd backend
@@ -56,9 +86,9 @@ npm install
 npm run dev
 ```
 
-Backend default URL: http://localhost:5000
+Backend URL: `http://localhost:5000`
 
-### 2) Frontend
+### 2. Frontend
 
 ```bash
 cd frontend
@@ -66,12 +96,11 @@ npm install
 npm run dev
 ```
 
-Frontend default URL: http://localhost:5173
-Note: Vite may auto-switch to another port if 5173 is busy.
+Frontend URL: usually `http://localhost:5173`
 
 ## Environment Variables
 
-Create backend `.env`:
+Create `backend/.env`:
 
 ```env
 PORT=5000
@@ -83,6 +112,14 @@ DB_MAX_ATTEMPTS=3
 DB_RETRY_DELAY_MS=5000
 FRONTEND_URL=http://localhost:5173
 CORS_ORIGINS=
+
+# Optional admin seed overrides
+ADMIN_TEST_NAME=Test Admin
+ADMIN_TEST_EMAIL=admin@lnf.local
+ADMIN_TEST_PASSWORD=Admin@123456
+ADMIN_RESET_PASSWORD_ON_BOOT=false
+
+# Optional email service config (not required for current auth flow)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your-gmail@gmail.com
@@ -92,136 +129,93 @@ OTP_EXPIRES_MINUTES=10
 APP_NAME=LostHub
 ```
 
-`FRONTEND_URL` accepts one origin. Use `CORS_ORIGINS` for additional comma-separated origins in production.
-
-Gmail App Password setup:
-Go to Google Account -> Security -> 2-Step Verification -> App Passwords -> create one for "Mail".
-Use that 16-character password as `SMTP_PASS`. Never use your actual Gmail password.
-
-Optional frontend `.env`:
+Optional `frontend/.env`:
 
 ```env
 VITE_API_URL=http://localhost:5000
+VITE_API_TIMEOUT_MS=15000
 ```
 
-In production, set `VITE_API_URL` to your backend public URL when frontend and backend are on different domains.
-
-## API Surface (High Level)
+## API Summary
 
 ### Auth
-- POST /api/auth/register
-- POST /api/auth/login
-- GET /api/auth/profile
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/auth/profile`
+- `PUT /api/auth/profile`
 
 ### Posts
-- GET /api/posts
-- GET /api/posts/:id
-- GET /api/posts/my-posts
-- POST /api/posts
-- PUT /api/posts/:id
-- DELETE /api/posts/:id
+- `GET /api/posts`
+- `GET /api/posts/:id`
+- `GET /api/posts/my-posts`
+- `POST /api/posts`
+- `PUT /api/posts/:id`
+- `DELETE /api/posts/:id`
 
 ### Messages
-- POST /api/messages
-- GET /api/messages/inbox
-- GET /api/messages/sent
-- GET /api/messages/conversations
-- GET /api/messages/thread/:otherUserId/:postId
-- POST /api/messages/reply
-- PUT /api/messages/read/:otherUserId/:postId
+- `POST /api/messages`
+- `GET /api/messages/inbox`
+- `GET /api/messages/sent`
+- `GET /api/messages/conversations`
+- `GET /api/messages/thread/:otherUserId/:postId`
+- `POST /api/messages/reply`
+- `PUT /api/messages/read/:otherUserId/:postId`
 
-## Messaging Data Model (Current)
+### Admin
+- `GET /api/admin/stats`
+- `GET /api/admin/users`
+- `GET /api/admin/posts`
+- `PATCH /api/admin/posts/:id`
+- `DELETE /api/admin/posts/:id`
+- `PATCH /api/admin/users/:id/ban`
+- `PATCH /api/admin/users/:id/promote`
 
-Message documents include:
+### Health
+- `GET /api/health`
 
-- senderId
-- receiverId
-- postId
-- messageText
-- isRead
-- createdAt
+## Realtime Events (Socket.IO)
 
-Conversations are grouped by:
-- other user
-- post id
+Client emits:
+- `conversation:join`
+- `conversation:leave`
+- `message:send`
+- `typing:start`
+- `typing:stop`
+- `messages:read`
 
-This allows multiple parallel conversations with the same person on different posts.
+Server emits:
+- `message:new`
+- `typing:indicator`
+- `messages:read-ack`
+- `notification:message`
+- `presence:update`
 
-## Production Readiness Checklist
+## Build & Deploy
 
-Use this checklist before releasing.
+Frontend:
+```bash
+cd frontend
+npm run build
+npm run preview
+```
 
-### Security
-- Strong JWT secret in production
-- MongoDB user with least privileges
-- CORS restricted to known domains
-- No secrets committed to git
-- Input validation enabled on all write endpoints
+Backend:
+```bash
+cd backend
+npm start
+```
 
-### Reliability
-- Process manager for API (PM2/systemd/container orchestration)
-- Health checks wired to deployment platform
-- Graceful shutdown enabled
-- Log retention policy defined
-
-### Performance
-- Image upload limits enforced
-- Static assets served via CDN/reverse proxy when needed
-- Query indexes reviewed for hot paths (messages, posts)
-
-### Operations
-- Daily database backup policy
-- Rollback plan for frontend and backend
-- Release checklist with smoke tests
-
-## Recommended Deployment Pattern
-
-### Backend
-- Build target: Node server
-- Run with `npm start`
-- Place behind reverse proxy (Nginx/Cloud load balancer)
-- Configure environment variables via host secret manager
-
-### Frontend
-- Build with `npm run build`
-- Deploy static assets to Vercel/Netlify/S3+CDN
-- Set `VITE_API_URL` to public backend URL
-
-## Smoke Test Script (Manual)
-
-After deploy:
-
-1. Register a test user
-2. Login and verify profile endpoint
-3. Create a post with image
-4. View post in public feed
-5. Send message from post detail
-6. Open messages page and verify conversation/thread load
-7. Reply in thread and verify optimistic update + polling sync
-
-## Common Troubleshooting
-
-### 404 on new message routes
-- Restart backend after pulling new code
-- Confirm route exists: GET /api/messages/conversations (should return 401 without token, not 404)
-
-### MongoDB connection failures
-- Check Atlas network access/IP allowlist
-- Confirm MONGO_URI and credentials
-
-### Images not loading
-- Confirm backend static mount `/uploads`
-- Verify stored imageUrl starts with `/uploads/...`
-
-### Token issues
-- Clear localStorage and sign in again
-- Confirm frontend is sending Authorization header
+Recommended deployment pattern:
+- Deploy backend as Node service
+- Deploy frontend `dist` to static host
+- Set `VITE_API_URL` to backend public URL if cross-origin
+- Restrict CORS to known origins
 
 ## Documentation Map
 
-- Setup guide: SETUP.md
-- Feature map: FEATURES.md
-- File layout: FILE_STRUCTURE.md
-- Developer quick commands: QUICK_REFERENCE.md
-- Version log: VERSION.md
-- Design system: DESIGN_SYSTEM_REFERENCE.md
+- [SETUP.md](./SETUP.md)
+- [FEATURES.md](./FEATURES.md)
+- [FILE_STRUCTURE.md](./FILE_STRUCTURE.md)
+- [QUICK_REFERENCE.md](./QUICK_REFERENCE.md)
+- [DESIGN_SYSTEM_REFERENCE.md](./DESIGN_SYSTEM_REFERENCE.md)
+- [VERSION.md](./VERSION.md)

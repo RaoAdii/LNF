@@ -1,49 +1,67 @@
 # Setup Guide
 
-This guide is intended for contributors and deployment engineers who need predictable setup steps for local development and production rollout.
+This guide reflects the current repository state and startup behavior.
 
-## 1. Local Development
+## 1. Prerequisites
 
-### 1.1 Clone and open project
+- Node.js 18+
+- npm 9+
+- MongoDB (Atlas or local)
 
-```bash
-cd d:\
-git clone <repo-url> LNF
-cd LNF
-```
+## 2. Local Development
 
-### 1.2 Backend setup
+There is no root `package.json`; run frontend and backend separately.
+
+### 2.1 Backend
 
 ```bash
 cd backend
 npm install
 ```
 
-Create `.env`:
+Create `backend/.env`:
 
 ```env
 PORT=5000
 MONGO_URI=your_mongodb_connection_string
-JWT_SECRET=replace_with_a_strong_random_value
+JWT_SECRET=replace_with_a_strong_secret
 JWT_EXPIRES_IN=7d
 NODE_ENV=development
 DB_MAX_ATTEMPTS=3
 DB_RETRY_DELAY_MS=5000
 FRONTEND_URL=http://localhost:5173
 CORS_ORIGINS=
+
+# Optional admin seed overrides
+ADMIN_TEST_NAME=Test Admin
+ADMIN_TEST_EMAIL=admin@lnf.local
+ADMIN_TEST_PASSWORD=Admin@123456
+ADMIN_RESET_PASSWORD_ON_BOOT=false
+
+# Optional SMTP (not required for login/register)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-gmail@gmail.com
+SMTP_PASS=your-gmail-app-password
+FROM_EMAIL=your-gmail@gmail.com
+OTP_EXPIRES_MINUTES=10
+APP_NAME=LostHub
 ```
 
-Start API:
+Start backend:
 
 ```bash
 npm run dev
 ```
 
-Expected: server listens on port 5000 and connects to MongoDB.
+Expected:
+- API available at `http://localhost:5000`
+- `GET /api/health` returns 200 when DB is connected
+- Admin account gets auto-seeded on startup
 
-### 1.3 Frontend setup
+### 2.2 Frontend
 
-Open a second terminal:
+In a second terminal:
 
 ```bash
 cd frontend
@@ -55,43 +73,52 @@ Optional `frontend/.env`:
 
 ```env
 VITE_API_URL=http://localhost:5000
+VITE_API_TIMEOUT_MS=15000
 ```
 
-If frontend and backend are deployed on different domains, set `VITE_API_URL` to the backend public URL and configure backend `FRONTEND_URL`/`CORS_ORIGINS` accordingly.
+Expected:
+- Frontend available at `http://localhost:5173` (or another Vite port)
 
-Expected: Vite serves app on port 5173.
+## 3. First-Run Validation
 
-## 2. Verify Core Flows
+Run through this checklist after startup:
 
-Run through these in order:
+1. Open landing page and verify DotGrid hero background loads.
+2. Register a user and login.
+3. Create a listing with image upload.
+4. Browse listings and test filters.
+5. Open a post and send a message.
+6. Open messages and verify thread/conversation rendering.
+7. Login as admin and verify `/admin` actions.
 
-1. Register user
-2. Login
-3. Create post with image
-4. Open post detail
-5. Send contact message
-6. Open messages and verify thread appears
-7. Reply and verify thread updates
+## 4. Admin Login (Default Seed)
 
-## 3. Production Setup
+If you did not override admin env vars:
+- Email: `admin@lnf.local`
+- Password: `Admin@123456`
 
-### 3.1 Backend
+If login fails:
+1. Confirm backend is running with correct `MONGO_URI`.
+2. Restart backend (seeding runs on startup).
+3. Check custom `ADMIN_TEST_*` values in `.env`.
 
-- Set `NODE_ENV=production`
-- Set real `FRONTEND_URL` origin
-- Use secure secrets for JWT and database
-- Run with process manager (PM2/systemd/container)
+## 5. Production Setup
 
-Example PM2:
+### Backend
 
 ```bash
 cd backend
 npm install --omit=dev
-pm2 start server.js --name lnf-api
-pm2 save
+npm start
 ```
 
-### 3.2 Frontend
+Set:
+- `NODE_ENV=production`
+- strict `FRONTEND_URL` / `CORS_ORIGINS`
+- secure JWT and DB credentials
+- secure admin seed credentials
+
+### Frontend
 
 ```bash
 cd frontend
@@ -99,52 +126,42 @@ npm ci
 npm run build
 ```
 
-Publish `dist` to your static host.
+Deploy `frontend/dist` to static hosting.
 
-### 3.3 Reverse proxy and TLS
+## 6. Troubleshooting
 
-- Route `/api/*` to backend service
-- Route frontend assets from static host
-- Enforce HTTPS
-- Add compression and cache headers for static assets
+### Health check
 
-## 4. Security Hardening
+```bash
+curl -i http://localhost:5000/api/health
+```
 
-- Rotate JWT secret periodically
-- Restrict CORS origins
-- Restrict MongoDB network access
-- Back up database daily
-- Monitor logs for repeated 401/403/500 spikes
-
-## 5. Operational Checks Before Release
-
-- API health endpoint returns 200
-- Upload folder writable
-- Message routes return expected auth behavior
-- Client can read/write posts and messages
-- Error toasts show useful messages for failures
-
-## 6. Fast Debug Notes
-
-### Route exists check
+### Confirm protected route behavior
 
 ```bash
 curl -i http://localhost:5000/api/messages/conversations
 ```
 
-Expected without token: `401`.
+Expected without token: `401`
 
-### Port conflict on 5000
-
-PowerShell:
+### Port conflict on 5000 (PowerShell)
 
 ```powershell
 Get-Process -Id (Get-NetTCPConnection -LocalPort 5000).OwningProcess | Stop-Process -Force
 ```
 
-### Clean install if dependencies drift
+### Fresh install
 
 ```bash
-cd backend && rm -rf node_modules package-lock.json && npm install
-cd ../frontend && rm -rf node_modules package-lock.json && npm install
+cd backend
+rm -rf node_modules package-lock.json
+npm install
+
+cd ../frontend
+rm -rf node_modules package-lock.json
+npm install
 ```
+
+### Frontend not reflecting Tailwind/theme changes
+
+Restart `npm run dev` in `frontend` after config/token updates.

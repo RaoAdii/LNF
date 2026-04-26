@@ -1,92 +1,98 @@
 # Feature Reference
 
-This document describes implemented product behavior as it exists in the repository today.
+This document lists implemented behavior as of the current codebase.
 
-## 1. Authentication
+## 1. Authentication & Session
 
-- Registration with validation and password confirmation
-- Login with JWT token issuance
-- Profile endpoint for authenticated user context
-- Frontend route protection with redirect to login when needed
+- User registration with validation
+- User login with JWT token issuance
+- Protected route access using Bearer auth
+- Profile fetch (`GET /api/auth/profile`)
+- Profile update (`PUT /api/auth/profile`) with avatar upload
+- Local session persistence in frontend (`localStorage`)
 
-## 2. Lost/Found Post Lifecycle
+## 2. Listings Lifecycle
 
-- Create lost or found post
-- Upload one image per post
-- Edit post details and optionally replace image
-- Delete post (owner-only)
-- Mark post as resolved
+- Create lost/found listing with image upload
+- Edit listing content and status (`open`/`resolved`)
+- Delete listing (owner-only)
+- View listing feed and listing detail pages
+- Owner dashboard (`/my-posts`) with quick actions
 
-### Search and Discovery
+## 3. Search & Discovery
 
-- Keyword query across post text
-- Filter by type: lost/found
+- Text query filtering (`q`) by title/description/location
+- Filter by type (`lost` / `found`)
 - Filter by category
-- Combined query and filter support
+- Paginated feed response with metadata (`page`, `totalPages`, `hasMore`)
+- Feed summary counts (`lostCount`, `foundCount`, `resolvedCount`)
 
-## 3. Messaging (Threaded Chat)
+## 4. Messaging
 
-Messaging is now conversation-first and grouped by user + post.
+### API Messaging
+- Send initial message from post detail
+- Read inbox and sent messages
+- Conversation aggregation endpoint
+- Thread endpoint grouped by post + user
+- Reply endpoint
+- Mark thread as read endpoint
 
-### Conversation list
+### Realtime Messaging (Socket.IO)
+- Authenticated websocket connection
+- Room join/leave by `user pair + post`
+- Realtime message delivery (`message:new`)
+- Typing indicator events
+- Read acknowledgement events
+- Presence updates
 
-- Shows all conversations where current user is sender or receiver
-- Group key: other user id + post id
-- Shows last message preview and timestamp
-- Shows unread indicator
+### Resilience
+- UI falls back to periodic API refresh when socket disconnects
+- Send path falls back to REST reply endpoint when needed
 
-### Thread view
+## 5. Admin Console
 
-- Displays chronological messages (oldest first)
-- Distinct sent and received bubble styles
-- Date separators in long threads
-- Marks incoming messages as read when opening thread
+- Dedicated admin route (`/admin`)
+- Stats overview (users, posts, open/resolved, messages)
+- User moderation:
+  - ban/unban user
+  - promote/demote admin role
+- Listing moderation:
+  - toggle listing type (`lost` / `found`)
+  - toggle listing status (`open` / `resolved`)
+  - delete listing
 
-### Reply flow
+## 6. Landing & Theming
 
-- Reply within active thread
-- Enter sends message; Shift+Enter adds new line
-- Optimistic append for instant feedback
-- Background polling every 3 seconds to keep thread fresh
+- Interactive DotGrid background on landing hero
+- Floating navbar on landing with dock animation when navigating to auth pages
+- Unified dark theme across app pages
+- Token-based typography/color system (`text-ink-primary`, `text-ink-secondary`, `text-ink-muted`)
 
-### Contact owner box (Post detail)
+## 7. UX & Performance
 
-- Message composer opens inline
-- Success state remains visible after send
-- Session dedupe avoids repeated initial outreach in same session
-- Shortcut link to open Messages page
+- Lazy-loaded route chunks via `React.lazy`
+- Skeleton loading states for key pages
+- Motion transitions via Framer Motion + CSS keyframes
+- Axios timeout and retry behavior for key read requests
+- Cached static asset headers on backend for uploads
+- Compression enabled on backend responses
 
-## 4. UX and Interaction
+## 8. Data Validation & Integrity
 
-- Glass-style cards and surfaces
-- Animated page and component transitions
-- Skeleton loading states
-- Error/success toasts for async actions
-- Responsive layout across mobile/tablet/desktop
+- express-validator on auth/posts/messages routes
+- Mongoose schema validation and enums
+- MIME/type + file size validation for uploads
+- Ownership checks for listing mutations
+- Ban enforcement in auth middleware and socket auth
 
-## 5. Data Integrity and Validation
+## 9. Operational Behavior
 
-- Server-side request validation for auth, posts, and messages
-- ObjectId validation for thread/reply route params
-- Upload MIME/type and size controls
-- Ownership checks for post mutation endpoints
+- Startup environment checks (`MONGO_URI`, `JWT_SECRET`)
+- Health endpoint (`/api/health`)
+- Graceful server shutdown handling
+- Automatic test/admin account seeding at DB connect time
 
-## 6. Security Features
+## 10. Scope Notes
 
-- Password hashing with bcrypt
-- JWT-protected API routes
-- Auth interceptors on frontend
-- CORS allowlist support
-
-## 7. Operational Features
-
-- Health endpoint for readiness checks
-- Startup environment validation
-- Upload directory auto-creation
-- Graceful shutdown support
-
-## 8. Known Scope Boundaries
-
-- Polling is used instead of WebSocket real-time transport
-- No admin moderation console in current release
-- No external push notifications in current release
+- Cloudinary and SMTP utilities exist but are not part of the current primary auth flow.
+- No automated test suite is included yet in this repository.

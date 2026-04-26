@@ -1,119 +1,121 @@
 # Design System Reference
 
-This document explains the visual language used by the frontend and how to extend it safely.
+This document describes the current frontend design language and extension rules.
 
-## 1. Core Design Tokens
+## 1. Core Theme Direction
 
-Defined in frontend/src/index.css under :root.
+The application uses a dark, high-contrast visual style.
+
+- Main text: white (`ink-primary`)
+- Secondary/supporting text: white shades (`ink-secondary`, `ink-muted`)
+- Surfaces: deep navy/violet glass layers
+- Accent: luminous violet
+
+## 2. Design Tokens
+
+Global tokens are defined in `frontend/src/index.css` under `:root`.
 
 ### Color Tokens
-- --bg-base: page background
-- --bg-surface: card/input base
-- --bg-elevated: translucent elevated surfaces
-- --ink-primary: main text
-- --ink-secondary: secondary text
-- --ink-muted: supporting labels/timestamps
-- --accent: primary interactive color
-- --accent-soft: subtle accent background
-- --lost-color: lost-state alert color
-- --found-color: found-state success color
-- --border: default border color
+- `--bg-base`
+- `--bg-surface`
+- `--bg-elevated`
+- `--ink-primary`
+- `--ink-secondary`
+- `--ink-muted`
+- `--accent`
+- `--accent-soft`
+- `--lost-color`
+- `--found-color`
+- `--border`
 
-### Shadow Tokens
-- --shadow-sm
-- --shadow-md
-- --shadow-lg
+### Shape and Elevation
+- Radii: `--radius-sm` to `--radius-xl`
+- Shadows: `--shadow-sm`, `--shadow-md`, `--shadow-lg`
 
-### Radius Tokens
-- --radius-sm
-- --radius-md
-- --radius-lg
-- --radius-xl
+## 3. Typography Rules
 
-## 2. Typography
+- Headings use `Syne`
+- Body/UI text uses `DM Sans`
+- Code/technical text can use `JetBrains Mono`
 
-Font families currently loaded:
-- Syne: headings, strong labels
-- DM Sans: body and controls
-- JetBrains Mono: optional technical text
+Text hierarchy guidance:
+- Use `text-ink-primary` for all key headings and primary labels
+- Use `text-ink-secondary` for body copy
+- Use `text-ink-muted` for metadata (timestamps, helper text)
+
+## 4. Global Utility Enforcement
+
+`index.css` includes utility-level overrides for:
+- `.text-ink-primary`
+- `.text-ink-secondary`
+- `.text-ink-muted`
+
+This keeps color consistency across pages, including auth, profile, listings, messages, and admin.
+
+## 5. Surface Patterns
+
+Use shared classes before creating custom surface styles:
+- `.glass`
+- `.glass-strong`
+- `.glass-subtle`
+- `.card`
+- `.card-glass`
+
+These classes provide consistent blur, border, and depth behavior.
+
+## 6. Landing Hero Pattern
+
+Landing page uses an interactive DotGrid background.
+
+Implementation:
+- Component: `src/components/DotGrid.jsx`
+- Styles: `src/components/DotGrid.css`
+- Usage page: `src/pages/Landing.jsx`
+
+Recommended DotGrid usage:
+- Keep it as a background layer (`absolute inset-0`)
+- Add an overlay gradient for readability
+- Ensure content is rendered in a higher `z-index`
+
+## 7. Navbar Behavior
+
+- Floating style on landing page
+- Docked style on internal pages
+- Smooth dock animation when navigating from landing to login/register
+- Same core color language across desktop and mobile nav
+
+## 8. Motion System
+
+Motion sources:
+- Framer Motion for route/component transitions
+- CSS keyframes for lightweight effects (`shimmer`, `shake`, `pageEnter`, etc.)
 
 Guidelines:
-- Use Syne for H1-H3 and key identity labels.
-- Use DM Sans for body copy and forms.
-- Keep body text readable with clear contrast against background tokens.
+- Keep transitions subtle and short (roughly 150ms-400ms)
+- Avoid heavy continuous animations on large content panels
+- Prefer transform/opacity over expensive paint operations
 
-## 3. Surface Patterns
+## 9. Form and Feedback Patterns
 
-### Glass Surfaces
-Use utility classes from index.css:
-- .glass
-- .glass-strong
-- .glass-subtle
+Forms:
+- Use `FloatingLabelInput` where possible
+- Use `.input`, `.input-label`, and `.input-wrapper`
 
-These classes combine blur, translucency, and soft borders. Prefer these over writing ad-hoc translucent backgrounds.
+Status feedback:
+- Use Toastify for async success/error messages
+- Use badges for type/status states (`lost`, `found`, `resolved`)
 
-### Cards
-- Use `card` base class with tokenized spacing and radius.
-- Avoid mixed corner radii unless interaction context requires asymmetry (chat bubbles).
+## 10. Accessibility & Legibility Checklist
 
-## 4. Motion Principles
+When introducing new UI:
+1. Validate contrast against dark backgrounds
+2. Keep headings in `ink-primary`
+3. Keep body copy in `ink-secondary`
+4. Reserve `ink-muted` for helper/meta text
+5. Test on mobile and desktop breakpoints
 
-The UI uses Framer Motion for major transitions and CSS keyframes for lightweight effects.
+## 11. Extension Rules
 
-Available CSS keyframes include:
-- shimmer
-- shake
-- pulse-badge
-- fade-in-up
-- page-enter
-- page-exit
-
-Motion guidelines:
-- Keep durations short (typically 0.2s to 0.4s).
-- Prefer subtle movement over dramatic displacement.
-- Maintain consistent easing across similar interactions.
-
-## 5. Form Patterns
-
-### Floating Label Inputs
-- Use .input-wrapper + .input + .input-label pattern.
-- Keep labels inside a relative wrapper with the input to preserve selector behavior.
-- Placeholder text should be focus-aware where required by UX.
-
-### Validation
-- Errors appear below fields using muted red text tokens.
-- Avoid shifting layout aggressively on error; reserve space when practical.
-
-## 6. Status and Feedback
-
-### Badges
-- Lost items use lost-color and optional pulse animation.
-- Found/resolved states use found-color.
-- Category badges should remain neutral unless state-specific emphasis is required.
-
-### Toasts
-- Toasts are used for async outcomes (success, warning, error).
-- Message text should be direct and action-oriented.
-
-## 7. Messaging UI Guidelines
-
-For chat views:
-- Keep conversation list compact with clear unread indicators.
-- Maintain left/right bubble distinction for incoming/outgoing messages.
-- Use date separators for long threads.
-- Keep reply composer anchored with clear send affordance.
-
-## 8. Responsiveness
-
-Layout expectations:
-- Mobile: single-column navigation with focused content area.
-- Tablet: adaptive spacing with moderate density.
-- Desktop: multi-panel layouts where context switching is frequent (for example, messages).
-
-## 9. Extension Rules
-
-When adding new UI:
-- Reuse token variables first.
-- Reuse existing utility classes before introducing new classes.
-- Keep animations consistent with current timing/easing language.
-- Update this document whenever introducing new global tokens or interaction patterns.
+- Reuse tokens/utilities first; avoid ad-hoc hardcoded colors
+- Keep nav and panel styling consistent across pages
+- If you add a global token or utility, update this file and `VERSION.md`
