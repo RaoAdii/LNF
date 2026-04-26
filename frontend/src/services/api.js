@@ -154,6 +154,7 @@ export const adminAPI = {
   deletePost: (postId) => api.delete(`/admin/posts/${postId}`),
   toggleBanUser: (userId) => api.patch(`/admin/users/${userId}/ban`),
   toggleAdminRole: (userId) => api.patch(`/admin/users/${userId}/promote`),
+  deleteUser: (userId) => api.delete(`/admin/users/${userId}`),
 };
 
 export default api;

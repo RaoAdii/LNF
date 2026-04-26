@@ -13,10 +13,15 @@ import {
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import PageWrapper from '../../components/PageWrapper';
+import ConfirmModal from '../../components/ConfirmModal';
 import { useAuth } from '../../context/AuthContext';
 import { adminAPI, getApiErrorMessage } from '../../services/api';
 
 const TABS = ['overview', 'users', 'listings'];
+const USER_ACTION_BUTTON_CLASS = 'btn btn-secondary w-full px-3 py-1.5 text-xs disabled:opacity-50';
+const LISTING_ACTION_BUTTON_CLASS = 'btn btn-secondary w-full px-3 py-1.5 text-xs disabled:opacity-50';
+const LISTING_DELETE_BUTTON_CLASS = 'btn btn-danger w-full px-3 py-1.5 text-xs disabled:opacity-50';
+const USER_DELETE_BUTTON_CLASS = 'btn btn-danger w-full px-3 py-1.5 text-xs disabled:opacity-50';
 
 function StatsCard({ label, value, icon: Icon, tone = 'text-accent' }) {
   return (
@@ -40,6 +45,8 @@ export default function AdminPanel() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [busyKey, setBusyKey] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteUserTarget, setDeleteUserTarget] = useState(null);
 
   useEffect(() => {
     if (user && user.role !== 'admin') {
@@ -113,16 +120,43 @@ export default function AdminPanel() {
     });
   };
 
-  const handleDeletePost = async (postId) => {
-    if (!window.confirm('Delete this listing permanently?')) {
+  const handleDeleteUser = async () => {
+    if (!deleteUserTarget?._id) {
       return;
     }
+
+    const { _id: targetUserId } = deleteUserTarget;
+
+    await withBusy(`user-delete-${targetUserId}`, async () => {
+      try {
+        const { data } = await adminAPI.deleteUser(targetUserId);
+        setUsers((previous) => previous.filter((entry) => entry._id !== targetUserId));
+        setPosts((previous) =>
+          previous.filter(
+            (entry) => String(entry?.createdBy?._id || entry?.createdBy || '') !== String(targetUserId)
+          )
+        );
+        setDeleteUserTarget(null);
+        toast.success(data?.message || 'User deleted permanently.');
+      } catch (error) {
+        toast.error(getApiErrorMessage(error, 'Failed to delete user.'));
+      }
+    });
+  };
+
+  const handleDeletePost = async () => {
+    if (!deleteTarget?._id) {
+      return;
+    }
+
+    const { _id: postId } = deleteTarget;
 
     await withBusy(`post-delete-${postId}`, async () => {
       try {
         await adminAPI.deletePost(postId);
         setPosts((previous) => previous.filter((entry) => entry._id !== postId));
         toast.success('Listing deleted.');
+        setDeleteTarget(null);
       } catch (error) {
         toast.error(getApiErrorMessage(error, 'Failed to delete listing.'));
       }
@@ -254,12 +288,12 @@ export default function AdminPanel() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-2">
+                        <div className="grid grid-cols-[112px_132px_112px] gap-2">
                           <button
                             type="button"
                             disabled={isOwnRecord || busyKey === `user-ban-${entry._id}`}
                             onClick={() => handleBan(entry._id)}
-                            className="btn btn-secondary px-3 py-1.5 text-xs disabled:opacity-50"
+                            className={USER_ACTION_BUTTON_CLASS}
                           >
                             <span className="inline-flex items-center gap-1">
                               <ShieldAlert size={13} />
@@ -270,11 +304,26 @@ export default function AdminPanel() {
                             type="button"
                             disabled={isOwnRecord || busyKey === `user-role-${entry._id}`}
                             onClick={() => handlePromote(entry._id)}
-                            className="btn btn-secondary px-3 py-1.5 text-xs disabled:opacity-50"
+                            className={USER_ACTION_BUTTON_CLASS}
                           >
                             <span className="inline-flex items-center gap-1">
                               <UserRoundCog size={13} />
                               <span>{entry.role === 'admin' ? 'Demote' : 'Make Admin'}</span>
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={
+                              isOwnRecord ||
+                              entry.role === 'admin' ||
+                              busyKey === `user-delete-${entry._id}`
+                            }
+                            onClick={() => setDeleteUserTarget(entry)}
+                            className={USER_DELETE_BUTTON_CLASS}
+                          >
+                            <span className="inline-flex items-center gap-1">
+                              <Trash2 size={13} />
+                              <span>Delete</span>
                             </span>
                           </button>
                         </div>
@@ -300,7 +349,7 @@ export default function AdminPanel() {
                   <th className="px-4 py-3 font-medium">Type</th>
                   <th className="px-4 py-3 font-medium">Status</th>
                   <th className="px-4 py-3 font-medium">Created By</th>
-                  <th className="px-4 py-3 font-medium">Actions</th>
+                  <th className="px-4 py-3 font-medium w-[412px]">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -334,12 +383,12 @@ export default function AdminPanel() {
                     </td>
                     <td className="px-4 py-3 font-dm text-ink-secondary">{entry.createdBy?.name || '-'}</td>
                     <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-2">
+                      <div className="grid grid-cols-[120px_148px_112px] gap-2">
                         <button
                           type="button"
                           disabled={busyKey === `post-type-${entry._id}`}
                           onClick={() => handleTypeToggle(entry)}
-                          className="btn btn-secondary px-3 py-1.5 text-xs disabled:opacity-50"
+                          className={LISTING_ACTION_BUTTON_CLASS}
                         >
                           {entry.type === 'lost' ? 'Set Found' : 'Set Lost'}
                         </button>
@@ -347,15 +396,15 @@ export default function AdminPanel() {
                           type="button"
                           disabled={busyKey === `post-status-${entry._id}`}
                           onClick={() => handleStatusToggle(entry)}
-                          className="btn btn-secondary px-3 py-1.5 text-xs disabled:opacity-50"
+                          className={LISTING_ACTION_BUTTON_CLASS}
                         >
                           {entry.status === 'open' ? 'Mark Resolved' : 'Mark Open'}
                         </button>
                         <button
                           type="button"
                           disabled={busyKey === `post-delete-${entry._id}`}
-                          onClick={() => handleDeletePost(entry._id)}
-                          className="btn btn-danger px-3 py-1.5 text-xs"
+                          onClick={() => setDeleteTarget(entry)}
+                          className={LISTING_DELETE_BUTTON_CLASS}
                         >
                           <span className="inline-flex items-center gap-1">
                             <Trash2 size={13} />
@@ -375,6 +424,32 @@ export default function AdminPanel() {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        title="Delete Listing?"
+        message={
+          deleteTarget
+            ? `This will permanently remove "${deleteTarget.title}". This action cannot be undone.`
+            : ''
+        }
+        onConfirm={handleDeletePost}
+        onCancel={() => setDeleteTarget(null)}
+        isDangerous
+      />
+
+      <ConfirmModal
+        isOpen={Boolean(deleteUserTarget)}
+        title="Delete User?"
+        message={
+          deleteUserTarget
+            ? `This will permanently remove ${deleteUserTarget.name} (${deleteUserTarget.email}) and related data (posts/messages). This action cannot be undone.`
+            : ''
+        }
+        onConfirm={handleDeleteUser}
+        onCancel={() => setDeleteUserTarget(null)}
+        isDangerous
+      />
     </PageWrapper>
   );
 }

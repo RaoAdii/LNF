@@ -11,6 +11,7 @@ This map documents the active repository layout and ownership boundaries.
 - `QUICK_REFERENCE.md` - fast command/API cheatsheet
 - `DESIGN_SYSTEM_REFERENCE.md` - visual and interaction standards
 - `VERSION.md` - changelog
+- `docs/screenshots/` - README UI screenshots
 
 ## Backend (`backend/`)
 

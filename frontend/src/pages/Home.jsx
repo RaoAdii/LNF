@@ -9,6 +9,13 @@ import { toast } from 'react-toastify';
 
 const HOME_FETCH_ERROR_TOAST_ID = 'home-fetch-posts-error';
 const PAGE_SIZE = 9;
+const HOME_CACHE_VERSION = 'v1';
+const HOME_CACHE_TTL_MS = 5 * 60 * 1000;
+const DEFAULT_SEARCH_PARAMS = {
+  q: '',
+  type: '',
+  category: '',
+};
 
 const EMPTY_SUMMARY = {
   lostCount: 0,
@@ -24,17 +31,67 @@ const EMPTY_META = {
   hasMore: false,
 };
 
+const getHomeCacheKey = (params) =>
+  `home:listings:${HOME_CACHE_VERSION}:${encodeURIComponent(JSON.stringify(params || DEFAULT_SEARCH_PARAMS))}`;
+
+const readCachedListings = (params) => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    const rawValue = window.sessionStorage.getItem(getHomeCacheKey(params));
+    if (!rawValue) {
+      return null;
+    }
+
+    const parsed = JSON.parse(rawValue);
+    const ageMs = Date.now() - Number(parsed?.cachedAt || 0);
+    if (!Number.isFinite(ageMs) || ageMs > HOME_CACHE_TTL_MS) {
+      window.sessionStorage.removeItem(getHomeCacheKey(params));
+      return null;
+    }
+
+    if (!Array.isArray(parsed?.posts) || !parsed?.meta || !parsed?.summary) {
+      return null;
+    }
+
+    return {
+      posts: parsed.posts,
+      meta: parsed.meta,
+      summary: parsed.summary,
+    };
+  } catch (_error) {
+    return null;
+  }
+};
+
+const writeCachedListings = (params, payload) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(
+      getHomeCacheKey(params),
+      JSON.stringify({
+        ...payload,
+        cachedAt: Date.now(),
+      })
+    );
+  } catch (_error) {
+    // Ignore storage write errors.
+  }
+};
+
 const Home = () => {
-  const [posts, setPosts] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [initialCachedData] = useState(() => readCachedListings(DEFAULT_SEARCH_PARAMS));
+  const [posts, setPosts] = useState(() => initialCachedData?.posts || []);
+  const [isLoading, setIsLoading] = useState(() => !initialCachedData);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [summary, setSummary] = useState(EMPTY_SUMMARY);
-  const [meta, setMeta] = useState(EMPTY_META);
-  const [searchParams, setSearchParams] = useState({
-    q: '',
-    type: '',
-    category: '',
-  });
+  const [summary, setSummary] = useState(() => initialCachedData?.summary || EMPTY_SUMMARY);
+  const [meta, setMeta] = useState(() => initialCachedData?.meta || EMPTY_META);
+  const [searchParams, setSearchParams] = useState(DEFAULT_SEARCH_PARAMS);
 
   const summaryCards = useMemo(
     () => [
@@ -46,10 +103,18 @@ const Home = () => {
   );
 
   const fetchPosts = async ({ page = 1, append = false } = {}) => {
+    const isFirstPage = !append && page === 1;
+    const cachedPayload = isFirstPage ? readCachedListings(searchParams) : null;
+
     if (append) {
       setIsLoadingMore(true);
-    } else {
+    } else if (!cachedPayload) {
       setIsLoading(true);
+    } else {
+      setPosts(cachedPayload.posts);
+      setMeta(cachedPayload.meta);
+      setSummary(cachedPayload.summary);
+      setIsLoading(false);
     }
 
     try {
@@ -72,8 +137,22 @@ const Home = () => {
         hasMore: Boolean(incomingMeta.hasMore),
       });
       setSummary(incomingSummary);
+
+      if (isFirstPage) {
+        writeCachedListings(searchParams, {
+          posts: incomingPosts,
+          meta: {
+            page: incomingMeta.page || page,
+            limit: incomingMeta.limit || PAGE_SIZE,
+            total: incomingMeta.total || 0,
+            totalPages: incomingMeta.totalPages || 1,
+            hasMore: Boolean(incomingMeta.hasMore),
+          },
+          summary: incomingSummary,
+        });
+      }
     } catch (error) {
-      if (!append) {
+      if (!append && !cachedPayload) {
         toast.error(getApiErrorMessage(error, 'Failed to fetch posts'), {
           toastId: HOME_FETCH_ERROR_TOAST_ID,
         });
@@ -167,9 +246,9 @@ const Home = () => {
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-loading="true">
-              {posts.map((post) => (
+              {posts.map((post, index) => (
                 <div key={post._id} className="h-full">
-                  <PostCard post={post} />
+                  <PostCard post={post} priority={index < 3} />
                 </div>
               ))}
             </div>

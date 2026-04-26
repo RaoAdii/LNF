@@ -107,6 +107,7 @@ If you did not override `ADMIN_TEST_*`:
 - `DELETE /api/admin/posts/:id`
 - `PATCH /api/admin/users/:id/ban`
 - `PATCH /api/admin/users/:id/promote`
+- `DELETE /api/admin/users/:id`
 
 ## Socket Event Names
 

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { AlertTriangle, ArrowRight, CheckCircle2, Clock3, MapPin } from 'lucide-react';
 import { resolveAssetUrl } from '../services/api';
 
-const PostCard = ({ post }) => {
+const PostCard = ({ post, priority = false }) => {
   const isLost = post.type === 'lost';
   const imageUrl = resolveAssetUrl(post.imageUrl);
   const [imgLoaded, setImgLoaded] = useState(false);
@@ -42,12 +42,13 @@ const PostCard = ({ post }) => {
               e.target.src = '/placeholder.svg';
               setImgLoaded(true);
             }}
-            loading="lazy"
+            loading={priority ? 'eager' : 'lazy'}
+            fetchPriority={priority ? 'high' : 'auto'}
             decoding="async"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             style={{
               opacity: imgLoaded ? 1 : 0,
-              transition: 'opacity 400ms cubic-bezier(0.4, 0, 0.2, 1)',
+              transition: 'opacity 180ms cubic-bezier(0.4, 0, 0.2, 1)',
               width: '100%',
               height: '100%',
               objectFit: 'cover',

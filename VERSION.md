@@ -9,6 +9,16 @@ Semantic versioning:
 - MINOR: backward-compatible features
 - PATCH: fixes/docs/refactors
 
+## 1.6.1 - README Screenshot Gallery + Admin Docs Sync (2026-04-27)
+
+### Added
+- UI screenshot gallery to `README.md` for landing, listings, my-posts, and messages pages
+- Screenshot asset folder at `docs/screenshots/`
+
+### Changed
+- API docs updated to include `DELETE /api/admin/users/:id`
+- Feature and structure markdown updated to reflect permanent admin user deletion and screenshot assets
+
 ## 1.6.0 - Dark Theme Consolidation + Docs Refresh (2026-04-26)
 
 ### Added

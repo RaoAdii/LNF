@@ -34,10 +34,16 @@ exports.getAllPosts = async (req, res) => {
 
     const [posts, total, breakdown, resolvedCount] = await Promise.all([
       Post.find(query)
-        .populate('createdBy', 'name email')
+        .select('type title description imageUrl location category status createdBy createdAt')
+        .populate({
+          path: 'createdBy',
+          select: 'name email',
+          options: { lean: true },
+        })
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit),
+        .limit(limit)
+        .lean(),
       Post.countDocuments(query),
       Post.aggregate([{ $match: query }, { $group: { _id: '$type', count: { $sum: 1 } } }]),
       Post.countDocuments({ ...query, status: 'resolved' }),
@@ -46,6 +52,8 @@ exports.getAllPosts = async (req, res) => {
     const lostCount = breakdown.find((item) => item._id === 'lost')?.count || 0;
     const foundCount = breakdown.find((item) => item._id === 'found')?.count || 0;
     const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    res.set('Cache-Control', 'public, max-age=15, stale-while-revalidate=60');
 
     res.status(200).json({
       message: 'Posts retrieved successfully',

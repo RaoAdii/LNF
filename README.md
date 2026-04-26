@@ -13,6 +13,20 @@ This codebase is actively maintained and production-oriented with:
 - Admin console for users and listings
 - Automatic default admin seeding on backend startup
 
+## UI Screenshots
+
+### Landing
+![Landing Page](./docs/screenshots/landing-page.png)
+
+### Listings Feed
+![Listings Home Page](./docs/screenshots/listings-home-page.png)
+
+### My Posts
+![My Posts Page](./docs/screenshots/my-posts-page.png)
+
+### Messages
+![Messages Page](./docs/screenshots/messages-page.png)
+
 ## Tech Stack
 
 ### Frontend
@@ -57,6 +71,7 @@ This codebase is actively maintained and production-oriented with:
   - Platform stats
   - Ban/unban users
   - Promote/demote admin role
+  - Delete user permanently (also removes related posts/messages)
   - Toggle listing type/status
   - Delete listings
 
@@ -169,6 +184,7 @@ VITE_API_TIMEOUT_MS=15000
 - `DELETE /api/admin/posts/:id`
 - `PATCH /api/admin/users/:id/ban`
 - `PATCH /api/admin/users/:id/promote`
+- `DELETE /api/admin/users/:id`
 
 ### Health
 - `GET /api/health`

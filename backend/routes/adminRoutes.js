@@ -9,6 +9,7 @@ const {
   updatePostFlags,
   toggleBanUser,
   toggleAdminRole,
+  deleteUser,
 } = require('../controllers/adminController');
 
 const router = express.Router();
@@ -22,5 +23,6 @@ router.patch('/posts/:id', updatePostFlags);
 router.delete('/posts/:id', deletePost);
 router.patch('/users/:id/ban', toggleBanUser);
 router.patch('/users/:id/promote', toggleAdminRole);
+router.delete('/users/:id', deleteUser);
 
 module.exports = router;

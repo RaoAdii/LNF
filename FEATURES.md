@@ -56,6 +56,7 @@ This document lists implemented behavior as of the current codebase.
 - User moderation:
   - ban/unban user
   - promote/demote admin role
+  - delete user permanently (with related post/message cleanup)
 - Listing moderation:
   - toggle listing type (`lost` / `found`)
   - toggle listing status (`open` / `resolved`)

@@ -184,3 +184,55 @@ exports.toggleAdminRole = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.deleteUser = async (req, res, next) => {
+  try {
+    const targetUserId = String(req.params.id || '');
+    const actingUserId = String(req.user?.id || '');
+
+    if (!targetUserId) {
+      return res.status(400).json({ success: false, message: 'User id is required.' });
+    }
+
+    if (targetUserId === actingUserId) {
+      return res.status(400).json({ success: false, message: 'You cannot delete your own admin account.' });
+    }
+
+    const user = await User.findById(targetUserId).select('role email');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    if (user.role === 'admin') {
+      return res.status(400).json({ success: false, message: 'Cannot delete another admin account.' });
+    }
+
+    const userPostIds = await Post.find({ createdBy: targetUserId }).distinct('_id');
+    const messageFilters = [{ senderId: targetUserId }, { receiverId: targetUserId }];
+
+    if (userPostIds.length > 0) {
+      messageFilters.push({ postId: { $in: userPostIds } });
+    }
+
+    const [deletedMessagesResult, deletedPostsResult, deletedUserResult] = await Promise.all([
+      Message.deleteMany({ $or: messageFilters }),
+      Post.deleteMany({ createdBy: targetUserId }),
+      User.deleteOne({ _id: targetUserId }),
+    ]);
+
+    if (deletedUserResult.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    return res.json({
+      success: true,
+      message: 'User and related data deleted permanently.',
+      cleanup: {
+        postsDeleted: deletedPostsResult.deletedCount || 0,
+        messagesDeleted: deletedMessagesResult.deletedCount || 0,
+      },
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
