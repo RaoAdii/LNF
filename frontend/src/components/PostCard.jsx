@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { AlertTriangle, ArrowRight, CheckCircle2, Clock3, MapPin } from 'lucide-react';
 import { resolveAssetUrl } from '../services/api';
 
@@ -23,17 +22,8 @@ const PostCard = ({ post }) => {
 
   return (
     <Link to={`/post/${post._id}`}>
-      <motion.div
-        className="glass rounded-2xl overflow-hidden cursor-pointer group h-full"
-        whileHover={{
-          y: -4,
-          transition: {
-            type: 'spring',
-            stiffness: 300,
-            damping: 30,
-          },
-        }}
-        whileTap={{ scale: 0.98 }}
+      <div
+        className="glass rounded-2xl overflow-hidden cursor-pointer group h-full flex flex-col post-card"
         style={{ transform: 'translateZ(0)' }}
       >
         <div className="relative overflow-hidden bg-gray-100" style={{ aspectRatio: '4/3' }}>
@@ -81,12 +71,12 @@ const PostCard = ({ post }) => {
           </div>
         </div>
 
-        <div className="p-4">
+        <div className="p-4 flex flex-col flex-1">
           <h3 className="text-lg font-syne font-bold mb-2 text-ink-primary line-clamp-2">
             {post.title}
           </h3>
 
-          <p className="text-sm font-dm font-light text-ink-secondary mb-4 line-clamp-2 leading-relaxed">
+          <p className="text-sm font-dm font-light text-ink-secondary mb-4 line-clamp-2 leading-relaxed flex-1">
             {post.description}
           </p>
 
@@ -108,7 +98,7 @@ const PostCard = ({ post }) => {
             <ArrowRight size={15} aria-hidden="true" />
           </div>
         </div>
-      </motion.div>
+      </div>
     </Link>
   );
 };

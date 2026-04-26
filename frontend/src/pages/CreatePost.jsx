@@ -323,7 +323,7 @@ const CreatePost = () => {
               </motion.button>
               <motion.button
                 type="button"
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/home')}
                 className="flex-1 btn btn-secondary"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.97 }}

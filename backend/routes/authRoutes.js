@@ -10,7 +10,6 @@ router.post(
   '/register',
   [
     body('name', 'Name is required').notEmpty().trim(),
-    body('role', 'Role must be either user or admin').optional().isIn(['user', 'admin']),
     body('email', 'Valid email is required').isEmail().normalizeEmail(),
     body('password', 'Password must be at least 6 characters').isLength({ min: 6 }),
   ],

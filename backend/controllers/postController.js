@@ -1,10 +1,12 @@
 const Post = require('../models/Post');
-const User = require('../models/User');
 const { validationResult } = require('express-validator');
 
 exports.getAllPosts = async (req, res) => {
   try {
-    let query = {};
+    const query = {};
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(30, Math.max(1, Number(req.query.limit) || 9));
+    const skip = (page - 1) * limit;
 
     // Search by keyword
     if (req.query.q) {
@@ -26,14 +28,41 @@ exports.getAllPosts = async (req, res) => {
       query.category = req.query.category;
     }
 
-    const posts = await Post.find(query)
-      .populate('createdBy', 'name email')
-      .sort({ createdAt: -1 });
+    if (req.query.status) {
+      query.status = req.query.status;
+    }
+
+    const [posts, total, breakdown, resolvedCount] = await Promise.all([
+      Post.find(query)
+        .populate('createdBy', 'name email')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Post.countDocuments(query),
+      Post.aggregate([{ $match: query }, { $group: { _id: '$type', count: { $sum: 1 } } }]),
+      Post.countDocuments({ ...query, status: 'resolved' }),
+    ]);
+
+    const lostCount = breakdown.find((item) => item._id === 'lost')?.count || 0;
+    const foundCount = breakdown.find((item) => item._id === 'found')?.count || 0;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
 
     res.status(200).json({
       message: 'Posts retrieved successfully',
       count: posts.length,
       posts,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasMore: page < totalPages,
+      },
+      summary: {
+        lostCount,
+        foundCount,
+        resolvedCount,
+      },
     });
   } catch (error) {
     console.error('getAllPosts error:', error.message);

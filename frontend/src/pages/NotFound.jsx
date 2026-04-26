@@ -28,7 +28,7 @@ export default function NotFound() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <Link to="/">
+            <Link to="/home">
               <button className="btn btn-primary">
                 Go Back Home
               </button>

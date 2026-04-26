@@ -7,6 +7,7 @@ import {
   getConversations,
   getThread,
   markThreadAsRead,
+  replyMessage,
 } from '../services/api';
 import { getSocket } from '../services/socket';
 
@@ -121,6 +122,7 @@ const Messages = () => {
   const [isSending, setIsSending] = useState(false);
   const [mobileThreadOpen, setMobileThreadOpen] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [socketConnected, setSocketConnected] = useState(false);
 
   const messagesEndRef = useRef(null);
   const isInitialLoad = useRef(true);
@@ -141,6 +143,27 @@ const Messages = () => {
   useEffect(() => {
     selectedConversationRef.current = selectedConversation;
   }, [selectedConversation]);
+
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) {
+      setSocketConnected(false);
+      return undefined;
+    }
+
+    setSocketConnected(Boolean(socket.connected));
+
+    const handleConnect = () => setSocketConnected(true);
+    const handleDisconnect = () => setSocketConnected(false);
+
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
+
+    return () => {
+      socket.off('connect', handleConnect);
+      socket.off('disconnect', handleDisconnect);
+    };
+  }, []);
 
   const fetchConversationsData = useCallback(async (silent = false) => {
     if (!silent) {
@@ -235,6 +258,21 @@ const Messages = () => {
 
     fetchThreadData(selectedConversation);
   }, [selectedConversation, fetchThreadData]);
+
+  useEffect(() => {
+    if (socketConnected) {
+      return undefined;
+    }
+
+    const intervalId = setInterval(() => {
+      fetchConversationsData(true);
+      if (selectedConversationRef.current) {
+        fetchThreadData(selectedConversationRef.current, true);
+      }
+    }, 9000);
+
+    return () => clearInterval(intervalId);
+  }, [socketConnected, fetchConversationsData, fetchThreadData]);
 
   useEffect(() => {
     return () => {
@@ -410,12 +448,6 @@ const Messages = () => {
       return;
     }
 
-    const socket = getSocket();
-    if (!socket) {
-      toast.error('Realtime connection unavailable. Please login again.');
-      return;
-    }
-
     setReplyText('');
     if (replyInputRef.current) {
       replyInputRef.current.style.height = '44px';
@@ -424,16 +456,48 @@ const Messages = () => {
     setIsSending(true);
 
     try {
-      socket.emit('message:send', {
-        receiverId: selectedConversation.otherUser._id,
-        postId: selectedConversation.postId._id,
-        messageText: trimmedText,
-      });
+      const socket = getSocket();
 
-      socket.emit('typing:stop', {
-        otherUserId: selectedConversation.otherUser._id,
-        postId: selectedConversation.postId._id,
-      });
+      if (socket?.connected) {
+        socket.emit('message:send', {
+          receiverId: selectedConversation.otherUser._id,
+          postId: selectedConversation.postId._id,
+          messageText: trimmedText,
+        });
+
+        socket.emit('typing:stop', {
+          otherUserId: selectedConversation.otherUser._id,
+          postId: selectedConversation.postId._id,
+        });
+      } else {
+        const { data } = await replyMessage({
+          receiverId: selectedConversation.otherUser._id,
+          postId: selectedConversation.postId._id,
+          messageText: trimmedText,
+        });
+
+        const createdMessage = data?.data;
+        if (createdMessage) {
+          setThreadMessages((previous) => [...previous, createdMessage]);
+
+          setConversations((previous) =>
+            previous.map((conversation) =>
+              getConversationKey(conversation) === getConversationKey(selectedConversation)
+                ? {
+                    ...conversation,
+                    lastMessage: {
+                      messageText: createdMessage.messageText,
+                      createdAt: createdMessage.createdAt,
+                      senderId: normalizeId(createdMessage.senderId),
+                    },
+                  }
+                : conversation
+            )
+          );
+        }
+
+        toast.info('Sent using API fallback. Realtime will resume when websocket reconnects.');
+      }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to send message');
     } finally {
@@ -455,22 +519,34 @@ const Messages = () => {
   return (
     <PageWrapper>
       <div className="container-lg px-4 md:px-6 py-8 md:py-12">
-        <motion.h1
-          className="text-4xl font-syne font-bold text-ink-primary mb-6"
+        <motion.div
+          className="mb-6 flex flex-wrap items-center justify-between gap-3"
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
         >
-          Messages
-        </motion.h1>
+          <h1 className="text-4xl font-syne font-bold text-ink-primary">Messages</h1>
+          <span
+            className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-dm border ${
+              socketConnected
+                ? 'bg-green-500/15 text-green-200 border-green-400/30'
+                : 'bg-amber-500/15 text-amber-200 border-amber-400/30'
+            }`}
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${socketConnected ? 'bg-green-600' : 'bg-amber-500'}`}
+            />
+            {socketConnected ? 'Realtime Connected' : 'API Fallback Mode'}
+          </span>
+        </motion.div>
 
-        <div className="glass rounded-2xl border border-white/80 overflow-hidden shadow-sm h-[78vh] md:h-[72vh]">
+        <div className="glass rounded-2xl border border-white/20 overflow-hidden shadow-sm h-[78vh] md:h-[72vh]">
           <div className="h-full flex">
             <aside
               className={`${showListPanelMobile ? 'flex' : 'hidden'} md:flex`}
             >
-              <div className="w-full md:w-[300px] border-r border-black/5 flex flex-col">
-                <div className="px-4 py-4 border-b border-black/5">
+              <div className="w-full md:w-[300px] border-r border-white/10 flex flex-col">
+                <div className="px-4 py-4 border-b border-white/10">
                   <p className="text-sm font-dm font-medium text-ink-secondary">Conversations</p>
                 </div>
 
@@ -479,7 +555,7 @@ const Messages = () => {
                     Array.from({ length: 3 }).map((_, index) => (
                       <div
                         key={`conv-skeleton-${index}`}
-                        className="rounded-xl border border-white/70 bg-white/60 p-3 animate-pulse"
+                        className="rounded-xl border border-white/15 bg-[#1b1630]/75 p-3 animate-pulse"
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-slate-200" />
@@ -519,8 +595,8 @@ const Messages = () => {
                           onClick={() => handleSelectConversation(conversation)}
                           className={`w-full text-left p-3 rounded-xl transition-colors border-l-4 ${
                             isSelected
-                              ? 'bg-white/80 border-l-accent shadow-sm'
-                              : 'border-l-transparent hover:bg-white/65'
+                              ? 'bg-white/12 border-l-accent shadow-sm'
+                              : 'border-l-transparent hover:bg-white/6'
                           }`}
                         >
                           <div className="flex items-start gap-3">
@@ -577,11 +653,11 @@ const Messages = () => {
                 </div>
               ) : (
                 <>
-                  <div className="px-4 py-3 border-b border-black/5 bg-white/55 backdrop-blur-sm">
+                  <div className="px-4 py-3 border-b border-white/10 bg-[#17132a]/80 backdrop-blur-sm">
                     <div className="flex items-center gap-3">
                       <button
                         type="button"
-                        className="md:hidden text-sm px-2 py-1 rounded-md border border-black/10 text-ink-secondary"
+                        className="md:hidden text-sm px-2 py-1 rounded-md border border-white/15 text-ink-secondary"
                         onClick={() => setMobileThreadOpen(false)}
                       >
                         <span className="inline-flex items-center gap-1">
@@ -619,7 +695,7 @@ const Messages = () => {
                     </div>
                   </div>
 
-                  <div className="flex-1 px-4 py-4 bg-[rgba(255,255,255,0.35)]" style={messageScrollStyle}>
+                  <div className="flex-1 px-4 py-4 bg-[#110e22]/50" style={messageScrollStyle}>
                     {isLoadingThread && threadMessages.length === 0 ? (
                       <div className="h-full flex items-center justify-center">
                         <p className="text-sm font-dm text-ink-muted">Loading conversation...</p>
@@ -649,11 +725,11 @@ const Messages = () => {
                             <React.Fragment key={`${message._id}-${index}`}>
                               {showDate && (
                                 <div className="flex items-center gap-3 py-2">
-                                  <div className="h-px flex-1 bg-black/10" />
+                                  <div className="h-px flex-1 bg-white/10" />
                                   <span className="text-[0.72rem] font-dm text-ink-muted">
                                     {getDateLabel(message.createdAt)}
                                   </span>
-                                  <div className="h-px flex-1 bg-black/10" />
+                                  <div className="h-px flex-1 bg-white/10" />
                                 </div>
                               )}
 
@@ -668,8 +744,8 @@ const Messages = () => {
                                   <div
                                     className={`px-4 py-2.5 text-sm font-dm leading-relaxed shadow-sm ${
                                       isMine
-                                        ? 'bg-[#0f0f12] text-white'
-                                        : 'bg-white/85 text-ink-primary border border-black/10'
+                                        ? 'bg-[#8d7bff] text-white'
+                                        : 'bg-[#1f1a36] text-ink-primary border border-white/10'
                                     } message-bubble`}
                                     style={{
                                       borderRadius: isMine ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
@@ -704,7 +780,7 @@ const Messages = () => {
                     )}
                   </div>
 
-                  <div className="border-t border-black/5 p-3 bg-white/60 backdrop-blur-sm">
+                  <div className="border-t border-white/10 p-3 bg-[#17132a]/80 backdrop-blur-sm">
                     <div className="flex items-end gap-2">
                       <textarea
                         ref={replyInputRef}
@@ -720,7 +796,7 @@ const Messages = () => {
                         type="button"
                         onClick={handleSendReply}
                         disabled={isSending || !replyText.trim()}
-                        className="h-[44px] px-4 rounded-full bg-[#0f0f12] text-white text-sm font-dm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="h-[44px] px-4 rounded-full bg-[#8d7bff] text-white text-sm font-dm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isSending ? (
                           '...'

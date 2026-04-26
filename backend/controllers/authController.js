@@ -33,16 +33,10 @@ exports.register = async (req, res) => {
     return res.status(400).json({ message: errors.array()[0].msg });
   }
 
-  const { name, email, password, role } = req.body;
+  const { name, email, password } = req.body;
 
   try {
     const normalizedEmail = String(email || '').toLowerCase().trim();
-    const normalizedRole = String(role || 'user').toLowerCase().trim();
-
-    if (!['user', 'admin'].includes(normalizedRole)) {
-      return res.status(400).json({ success: false, message: 'Role must be user or admin.' });
-    }
-
     const exists = await User.findOne({ email: normalizedEmail });
     if (exists) {
       return res.status(409).json({ success: false, message: 'Email already registered.' });
@@ -52,7 +46,7 @@ exports.register = async (req, res) => {
       name: String(name || '').trim(),
       email: normalizedEmail,
       password,
-      role: normalizedRole,
+      role: 'user',
       isVerified: true,
     });
 

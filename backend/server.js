@@ -3,6 +3,7 @@ const express = require('express');
 const { createServer } = require('http');
 const { Server: SocketIO } = require('socket.io');
 const cors = require('cors');
+const compression = require('compression');
 const path = require('path');
 const fs = require('fs');
 const mongoose = require('mongoose');
@@ -10,6 +11,8 @@ const jwt = require('jsonwebtoken');
 const connectDB = require('./config/db');
 const User = require('./models/User');
 const Message = require('./models/Message');
+const Post = require('./models/Post');
+const { seedDefaultAdmin } = require('./utils/seedAdminUser');
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
@@ -40,9 +43,16 @@ if (!process.env.JWT_SECRET) {
 // Connect to MongoDB
 connectDB();
 
+mongoose.connection.once('connected', () => {
+  seedDefaultAdmin().catch((error) => {
+    console.error('[admin-seed] failed:', error.message);
+  });
+});
+
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(compression());
 
 // CORS configuration for local dev + production deployment
 const parseOrigins = (...originValues) => {
@@ -96,8 +106,26 @@ app.use(
 );
 
 // Serve uploaded files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use('/uploads/avatars', express.static(path.join(__dirname, 'uploads', 'avatars')));
+const staticAssetOptions = {
+  maxAge: process.env.NODE_ENV === 'production' ? '30d' : '1h',
+  etag: true,
+  setHeaders: (res, filePath) => {
+    if (/\.(png|jpe?g|webp|gif|svg)$/i.test(filePath)) {
+      res.setHeader(
+        'Cache-Control',
+        process.env.NODE_ENV === 'production'
+          ? 'public, max-age=2592000, immutable'
+          : 'public, max-age=3600'
+      );
+    }
+  },
+};
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), staticAssetOptions));
+app.use(
+  '/uploads/avatars',
+  express.static(path.join(__dirname, 'uploads', 'avatars'), staticAssetOptions)
+);
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -144,7 +172,13 @@ const httpServer = createServer(app);
 
 const io = new SocketIO(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: (origin, callback) => {
+      if (isAllowedOrigin(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`Socket CORS blocked: ${origin}`));
+      }
+    },
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -155,6 +189,7 @@ const onlineUsers = new Map();
 
 const buildRoomKey = (leftUserId, rightUserId, postId) =>
   [String(leftUserId), String(rightUserId)].sort().join('-') + ':' + String(postId);
+const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(String(value || ''));
 
 io.use(async (socket, next) => {
   try {
@@ -181,14 +216,14 @@ io.on('connection', (socket) => {
   io.emit('presence:update', { userId: uid, online: true });
 
   socket.on('conversation:join', ({ otherUserId, postId }) => {
-    if (!otherUserId || !postId) return;
+    if (!isValidObjectId(otherUserId) || !isValidObjectId(postId)) return;
     const roomKey = buildRoomKey(uid, otherUserId, postId);
     socket.join(roomKey);
     socket.currentRoom = roomKey;
   });
 
   socket.on('conversation:leave', ({ otherUserId, postId }) => {
-    if (!otherUserId || !postId) return;
+    if (!isValidObjectId(otherUserId) || !isValidObjectId(postId)) return;
     const roomKey = buildRoomKey(uid, otherUserId, postId);
     socket.leave(roomKey);
   });
@@ -196,8 +231,16 @@ io.on('connection', (socket) => {
   socket.on('message:send', async ({ receiverId, postId, messageText }) => {
     try {
       const normalizedText = String(messageText || '').trim();
-      if (!receiverId || !postId || !normalizedText) return;
+      if (!isValidObjectId(receiverId) || !isValidObjectId(postId) || !normalizedText) return;
       if (normalizedText.length > 2000) return;
+      if (String(receiverId) === uid) return;
+
+      const [postExists, receiverUser] = await Promise.all([
+        Post.exists({ _id: postId }),
+        User.findById(receiverId).select('_id isBanned').lean(),
+      ]);
+
+      if (!postExists || !receiverUser || receiverUser.isBanned) return;
 
       const message = await Message.create({
         senderId: uid,
@@ -209,6 +252,7 @@ io.on('connection', (socket) => {
       const populated = await Message.findById(message._id)
         .populate('senderId', 'name avatar')
         .populate('receiverId', 'name avatar')
+        .populate('postId', 'title type')
         .lean();
 
       const roomKey = buildRoomKey(uid, receiverId, postId);
@@ -231,20 +275,20 @@ io.on('connection', (socket) => {
   });
 
   socket.on('typing:start', ({ otherUserId, postId }) => {
-    if (!otherUserId || !postId) return;
+    if (!isValidObjectId(otherUserId) || !isValidObjectId(postId)) return;
     const roomKey = buildRoomKey(uid, otherUserId, postId);
     socket.to(roomKey).emit('typing:indicator', { userId: uid, typing: true });
   });
 
   socket.on('typing:stop', ({ otherUserId, postId }) => {
-    if (!otherUserId || !postId) return;
+    if (!isValidObjectId(otherUserId) || !isValidObjectId(postId)) return;
     const roomKey = buildRoomKey(uid, otherUserId, postId);
     socket.to(roomKey).emit('typing:indicator', { userId: uid, typing: false });
   });
 
   socket.on('messages:read', async ({ otherUserId, postId }) => {
     try {
-      if (!otherUserId || !postId) return;
+      if (!isValidObjectId(otherUserId) || !isValidObjectId(postId)) return;
 
       await Message.updateMany(
         { senderId: otherUserId, receiverId: uid, postId, isRead: false },

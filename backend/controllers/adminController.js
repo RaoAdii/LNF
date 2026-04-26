@@ -94,6 +94,54 @@ exports.deletePost = async (req, res, next) => {
   }
 };
 
+exports.updatePostFlags = async (req, res, next) => {
+  try {
+    const { type, status } = req.body || {};
+    const updates = {};
+
+    if (type !== undefined) {
+      if (!['lost', 'found'].includes(type)) {
+        return res.status(400).json({ success: false, message: 'Type must be lost or found.' });
+      }
+      updates.type = type;
+    }
+
+    if (status !== undefined) {
+      if (!['open', 'resolved'].includes(status)) {
+        return res.status(400).json({ success: false, message: 'Status must be open or resolved.' });
+      }
+      updates.status = status;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Provide at least one valid field to update (type or status).',
+      });
+    }
+
+    const post = await Post.findByIdAndUpdate(
+      req.params.id,
+      { $set: updates },
+      { new: true, runValidators: true }
+    )
+      .populate('createdBy', 'name email flatNumber block')
+      .lean();
+
+    if (!post) {
+      return res.status(404).json({ success: false, message: 'Post not found.' });
+    }
+
+    return res.json({
+      success: true,
+      post,
+      message: 'Post flags updated successfully.',
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
 exports.toggleBanUser = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id).select('-password');

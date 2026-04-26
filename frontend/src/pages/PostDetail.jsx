@@ -34,7 +34,7 @@ const PostDetail = () => {
       setPost(response.data.post);
     } catch (error) {
       toast.error(getApiErrorMessage(error, 'Failed to fetch post'));
-      navigate('/');
+      navigate('/home');
     } finally {
       setIsLoading(false);
     }

@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { SearchX } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { SearchX, ShieldCheck, Sparkles, Zap } from 'lucide-react';
 import PostCard from '../components/PostCard';
 import SearchBar from '../components/SearchBar';
 import PageWrapper from '../components/PageWrapper';
@@ -9,34 +8,88 @@ import { postAPI, getApiErrorMessage } from '../services/api';
 import { toast } from 'react-toastify';
 
 const HOME_FETCH_ERROR_TOAST_ID = 'home-fetch-posts-error';
+const PAGE_SIZE = 9;
+
+const EMPTY_SUMMARY = {
+  lostCount: 0,
+  foundCount: 0,
+  resolvedCount: 0,
+};
+
+const EMPTY_META = {
+  page: 1,
+  limit: PAGE_SIZE,
+  total: 0,
+  totalPages: 1,
+  hasMore: false,
+};
 
 const Home = () => {
   const [posts, setPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [summary, setSummary] = useState(EMPTY_SUMMARY);
+  const [meta, setMeta] = useState(EMPTY_META);
   const [searchParams, setSearchParams] = useState({
     q: '',
     type: '',
     category: '',
   });
 
-  useEffect(() => {
-    fetchPosts();
-  }, [searchParams]);
+  const summaryCards = useMemo(
+    () => [
+      { label: 'Lost Items', value: summary.lostCount, icon: ShieldCheck },
+      { label: 'Found Items', value: summary.foundCount, icon: Sparkles },
+      { label: 'Resolved', value: summary.resolvedCount, icon: Zap },
+    ],
+    [summary]
+  );
 
-  const fetchPosts = async () => {
-    setIsLoading(true);
+  const fetchPosts = async ({ page = 1, append = false } = {}) => {
+    if (append) {
+      setIsLoadingMore(true);
+    } else {
+      setIsLoading(true);
+    }
+
     try {
-      const response = await postAPI.getAllPosts(searchParams);
-      setPosts(response.data.posts || []);
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Failed to fetch posts'), {
-        toastId: HOME_FETCH_ERROR_TOAST_ID,
+      const response = await postAPI.getAllPosts({
+        ...searchParams,
+        page,
+        limit: PAGE_SIZE,
       });
-      setPosts([]);
+
+      const incomingPosts = response.data?.posts || [];
+      const incomingMeta = response.data?.meta || EMPTY_META;
+      const incomingSummary = response.data?.summary || EMPTY_SUMMARY;
+
+      setPosts((previous) => (append ? [...previous, ...incomingPosts] : incomingPosts));
+      setMeta({
+        page: incomingMeta.page || page,
+        limit: incomingMeta.limit || PAGE_SIZE,
+        total: incomingMeta.total || 0,
+        totalPages: incomingMeta.totalPages || 1,
+        hasMore: Boolean(incomingMeta.hasMore),
+      });
+      setSummary(incomingSummary);
+    } catch (error) {
+      if (!append) {
+        toast.error(getApiErrorMessage(error, 'Failed to fetch posts'), {
+          toastId: HOME_FETCH_ERROR_TOAST_ID,
+        });
+        setPosts([]);
+        setMeta(EMPTY_META);
+        setSummary(EMPTY_SUMMARY);
+      }
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
   };
+
+  useEffect(() => {
+    fetchPosts({ page: 1, append: false });
+  }, [searchParams]);
 
   const handleSearch = (query) => {
     setSearchParams((prev) => ({ ...prev, q: query }));
@@ -54,22 +107,39 @@ const Home = () => {
     setSearchParams({ q: '', type: '', category: '' });
   };
 
+  const handleLoadMore = () => {
+    if (!meta.hasMore || isLoadingMore || isLoading) {
+      return;
+    }
+    fetchPosts({ page: meta.page + 1, append: true });
+  };
+
   return (
     <PageWrapper>
-      <div className="container-lg px-6 py-12">
-        <motion.div
-          className="text-center mb-12"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-        >
-          <h1 className="text-5xl font-syne font-bold mb-4 text-ink-primary">
-            Lost and Found Hub
-          </h1>
-          <p className="text-lg text-ink-secondary font-dm font-light leading-relaxed">
-            Find or post lost and found items in your community
+      <div className="container-lg px-4 md:px-6 py-8 md:py-10">
+        <section className="mb-6">
+          <h1 className="text-2xl md:text-3xl font-syne font-bold text-ink-primary">Latest Listings</h1>
+          <p className="text-sm text-ink-secondary font-dm mt-1">
+            Showing {posts.length} of {meta.total} listings
           </p>
-        </motion.div>
+        </section>
+
+        <section className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {summaryCards.map(({ label, value, icon: Icon }) => (
+            <div
+              key={label}
+              className="rounded-xl bg-[#18142d]/85 border border-white/15 px-4 py-3 shadow-[0_10px_28px_rgba(0,0,0,0.32)]"
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-ink-secondary font-dm">{label}</p>
+                <Icon size={14} className="text-accent" />
+              </div>
+              <p className="text-2xl font-syne font-bold text-ink-primary mt-1">
+                {(Number(value) || 0).toLocaleString()}
+              </p>
+            </div>
+          ))}
+        </section>
 
         <SearchBar
           onSearch={handleSearch}
@@ -77,56 +147,41 @@ const Home = () => {
           onCategoryChange={handleCategoryChange}
         />
 
+        <section id="listing-feed" className="mb-5" />
+
         {isLoading ? (
           <div data-loading="true">
             <SkeletonGrid count={6} />
           </div>
         ) : posts.length === 0 ? (
-          <motion.div
-            className="text-center py-20"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-          >
+          <div className="text-center py-20">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-accent-soft mb-4">
               <SearchX size={30} className="text-accent" />
             </div>
-            <h3 className="text-xl font-semibold text-ink-primary mb-2">
-              No results found
-            </h3>
-            <p className="text-ink-muted mb-6">
-              Try different keywords or clear your filters.
-            </p>
-            <button
-              onClick={clearFilters}
-              className="btn btn-secondary"
-            >
+            <h3 className="text-xl font-semibold text-ink-primary mb-2">No results found</h3>
+            <p className="text-ink-muted mb-6">Try different keywords or clear your filters.</p>
+            <button onClick={clearFilters} className="btn btn-secondary">
               Clear Filters
             </button>
-          </motion.div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children" data-loading="true">
-            <AnimatePresence initial={false}>
-              {posts.map((post, index) => (
-                <motion.div
-                  key={post._id}
-                  initial={index < 6 ? { opacity: 0, y: 12 } : false}
-                  animate={{
-                    opacity: 1,
-                    y: 0,
-                    transition: {
-                      delay: index < 6 ? index * 0.03 : 0,
-                      duration: 0.22,
-                      ease: [0.22, 1, 0.36, 1],
-                    },
-                  }}
-                  exit={false}
-                >
-                  <PostCard post={post} />
-                </motion.div>
-              ))}
-            </AnimatePresence>
           </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-loading="true">
+              {posts.map((post) => (
+                <div key={post._id} className="h-full">
+                  <PostCard post={post} />
+                </div>
+              ))}
+            </div>
+
+            {meta.hasMore && (
+              <div className="mt-8 text-center">
+                <button onClick={handleLoadMore} disabled={isLoadingMore} className="btn btn-secondary min-w-[180px]">
+                  {isLoadingMore ? 'Loading more...' : 'Load More Listings'}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </PageWrapper>

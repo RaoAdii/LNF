@@ -1,31 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { Eye, EyeOff } from 'lucide-react';
 import { authAPI } from '../services/api';
 import PageWrapper from '../components/PageWrapper';
-import { useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
+import BrandLogo from '@components/BrandLogo';
 
 const validationSchema = Yup.object().shape({
-  name: Yup.string()
-    .min(2, 'Name must be at least 2 characters')
-    .required('Name is required'),
-  role: Yup.string()
-    .oneOf(['user', 'admin'], 'Please select a valid role')
-    .required('Role is required'),
-  email: Yup.string()
-    .email('Invalid email address')
-    .required('Email is required'),
-  password: Yup.string()
-    .min(6, 'Password must be at least 6 characters')
-    .required('Password is required'),
-  confirmPassword: Yup.string()
-    .oneOf([Yup.ref('password'), null], 'Passwords must match')
-    .required('Confirm Password is required'),
+  name: Yup.string().min(2, 'Name must be at least 2 characters').required('Name is required'),
+  email: Yup.string().email('Invalid email address').required('Email is required'),
+  password: Yup.string().min(6, 'Password must be at least 6 characters').required('Password is required'),
+  confirmPassword: Yup.string().oneOf([Yup.ref('password'), null], 'Passwords must match').required('Confirm Password is required'),
 });
 
 const getPasswordStrength = (password) => {
@@ -50,7 +38,6 @@ const Register = () => {
   const formik = useFormik({
     initialValues: {
       name: '',
-      role: 'user',
       email: '',
       password: '',
       confirmPassword: '',
@@ -62,7 +49,6 @@ const Register = () => {
       try {
         const response = await authAPI.register({
           name: values.name,
-          role: values.role,
           email: values.email,
           password: values.password,
           confirmPassword: values.confirmPassword,
@@ -70,7 +56,7 @@ const Register = () => {
 
         login(response.data.token, response.data.user);
         toast.success(response.data?.message || 'Account created successfully.');
-        navigate('/', { replace: true });
+        navigate('/home', { replace: true });
       } catch (error) {
         setHasError(true);
         toast.error(error.response?.data?.message || 'Registration failed');
@@ -96,138 +82,77 @@ const Register = () => {
 
   return (
     <PageWrapper>
-      <div className="min-h-screen flex items-center justify-center py-12 px-4">
-        <motion.div
-          className="card card-glass w-full max-w-md shadow-lg border"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
+      <div className="relative min-h-screen flex items-center justify-center py-12 px-4 bg-[radial-gradient(circle_at_12%_10%,#191433_0%,#0e0c1d_45%,#090814_100%)]">
+        <div
+          className="card card-glass relative z-10 w-full max-w-md shadow-lg border"
           style={hasError ? { animation: 'shake 0.4s ease-in-out' } : {}}
         >
-          {/* Header */}
           <div className="text-center mb-8">
-            <svg width="44" height="44" viewBox="0 0 44 44" 
-                 xmlns="http://www.w3.org/2000/svg" className="mx-auto mb-4">
-              
-              {/* Badge */}
-              <rect width="44" height="44" rx="10" fill="#ffffff"/>
-              
-              {/* Magnifying glass circle */}
-              <circle cx="16" cy="18" r="6" fill="none" stroke="#0f0f12" 
-                      strokeWidth="2.2" strokeLinecap="round"/>
-              
-              {/* Magnifying glass handle */}
-              <line x1="21" y1="23" x2="26" y2="28" stroke="#0f0f12" 
-                    strokeWidth="2.2" strokeLinecap="round"/>
-              
-              {/* Ghost diagonal line */}
-              <line x1="26" y1="12" x2="32" y2="34" stroke="#0f0f12" 
-                    strokeWidth="1.5" strokeLinecap="round" opacity="0.15"/>
-              
-              {/* F letter */}
-              <text x="28" y="33" fontFamily="Arial" fontWeight="900" 
-                    fontSize="11" fill="#0f0f12">F</text>
-              
-            </svg>
-            <h1 className="text-2xl font-syne font-bold text-ink-primary mb-2">
+            <div className="flex justify-center mb-4">
+              <BrandLogo
+                to="/home"
+                iconFill="#f7f8ff"
+                textColor="#f3f5ff"
+                subtitleColor="rgba(195, 205, 255, 0.72)"
+              />
+            </div>
+            <h1 className="text-[1.75rem] leading-tight font-syne font-bold mb-1 text-ink-primary">
               Create Account
             </h1>
-            <p className="text-sm text-ink-secondary font-dm font-light">
-              Join Lost & Found Hub today
-            </p>
+            <p className="text-sm text-ink-secondary font-dm font-light">Join Lost & Found Hub today</p>
           </div>
 
-          {/* Form */}
           <form onSubmit={formik.handleSubmit} className="space-y-4 mb-6">
-            {/* Name */}
             <div className="input-wrapper">
               <div className="relative">
                 <input
                   type="text"
                   name="name"
-                  placeholder={focused.name || formik.values.name ? "John Doe" : ""}
+                  placeholder={focused.name || formik.values.name ? 'John Doe' : ''}
                   className="input"
                   {...formik.getFieldProps('name')}
-                  onFocus={() => setFocused(prev => ({ ...prev, name: true }))}
+                  onFocus={() => setFocused((prev) => ({ ...prev, name: true }))}
                   onBlur={(e) => {
                     formik.handleBlur(e);
-                    setFocused(prev => ({ ...prev, name: false }));
+                    setFocused((prev) => ({ ...prev, name: false }));
                   }}
                 />
                 <label className="input-label">Full Name</label>
               </div>
-              {formik.touched.name && formik.errors.name && (
-                <p className="text-lost-color text-xs mt-1">{formik.errors.name}</p>
-              )}
+              {formik.touched.name && formik.errors.name && <p className="text-lost-color text-xs mt-1">{formik.errors.name}</p>}
             </div>
 
-            {/* Email */}
             <div className="input-wrapper">
               <div className="relative">
                 <input
                   type="email"
                   name="email"
-                  placeholder={focused.email || formik.values.email ? "your@email.com" : ""}
+                  placeholder={focused.email || formik.values.email ? 'your@email.com' : ''}
                   className="input"
                   {...formik.getFieldProps('email')}
-                  onFocus={() => setFocused(prev => ({ ...prev, email: true }))}
+                  onFocus={() => setFocused((prev) => ({ ...prev, email: true }))}
                   onBlur={(e) => {
                     formik.handleBlur(e);
-                    setFocused(prev => ({ ...prev, email: false }));
+                    setFocused((prev) => ({ ...prev, email: false }));
                   }}
                 />
                 <label className="input-label">Email Address</label>
               </div>
-              {formik.touched.email && formik.errors.email && (
-                <p className="text-lost-color text-xs mt-1">{formik.errors.email}</p>
-              )}
+              {formik.touched.email && formik.errors.email && <p className="text-lost-color text-xs mt-1">{formik.errors.email}</p>}
             </div>
 
-            {/* Role */}
-            <div className="input-wrapper">
-              <p className="text-xs font-medium text-ink-secondary mb-2">Register as</p>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => formik.setFieldValue('role', 'user')}
-                  className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                    formik.values.role === 'user'
-                      ? 'border-accent bg-accent/10 text-accent'
-                      : 'border-border text-ink-secondary hover:border-accent/50'
-                  }`}
-                >
-                  User
-                </button>
-                <button
-                  type="button"
-                  onClick={() => formik.setFieldValue('role', 'admin')}
-                  className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                    formik.values.role === 'admin'
-                      ? 'border-accent bg-accent/10 text-accent'
-                      : 'border-border text-ink-secondary hover:border-accent/50'
-                  }`}
-                >
-                  Admin
-                </button>
-              </div>
-              {formik.touched.role && formik.errors.role && (
-                <p className="text-lost-color text-xs mt-2">{formik.errors.role}</p>
-              )}
-            </div>
-
-            {/* Password */}
             <div className="input-wrapper">
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   name="password"
-                  placeholder={focused.password || formik.values.password ? "••••••••" : ""}
+                  placeholder={focused.password || formik.values.password ? '********' : ''}
                   className="input pr-10 py-3"
                   {...formik.getFieldProps('password')}
-                  onFocus={() => setFocused(prev => ({ ...prev, password: true }))}
+                  onFocus={() => setFocused((prev) => ({ ...prev, password: true }))}
                   onBlur={(e) => {
                     formik.handleBlur(e);
-                    setFocused(prev => ({ ...prev, password: false }));
+                    setFocused((prev) => ({ ...prev, password: false }));
                   }}
                 />
                 <button
@@ -243,16 +168,12 @@ const Register = () => {
               {formik.values.password && (
                 <div className="mt-3 flex items-center gap-2">
                   <div className="flex-1 h-1 bg-gray-200 rounded-full overflow-hidden">
-                    <motion.div
+                    <div
                       className={`h-full ${getStrengthColor()}`}
-                      initial={{ width: 0 }}
-                      animate={{ width: `${(passwordStrength / 4) * 100}%` }}
-                      transition={{ duration: 0.3 }}
+                      style={{ width: `${(passwordStrength / 4) * 100}%`, transition: 'width 180ms ease' }}
                     />
                   </div>
-                  <span className="text-xs font-dm font-medium text-ink-muted">
-                    {getStrengthText()}
-                  </span>
+                  <span className="text-xs font-dm font-medium text-ink-muted">{getStrengthText()}</span>
                 </div>
               )}
               {formik.touched.password && formik.errors.password && (
@@ -260,19 +181,18 @@ const Register = () => {
               )}
             </div>
 
-            {/* Confirm Password */}
             <div className="input-wrapper">
               <div className="relative">
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}
                   name="confirmPassword"
-                  placeholder={focused.confirmPassword || formik.values.confirmPassword ? "••••••••" : ""}
+                  placeholder={focused.confirmPassword || formik.values.confirmPassword ? '********' : ''}
                   className="input pr-10 py-3"
                   {...formik.getFieldProps('confirmPassword')}
-                  onFocus={() => setFocused(prev => ({ ...prev, confirmPassword: true }))}
+                  onFocus={() => setFocused((prev) => ({ ...prev, confirmPassword: true }))}
                   onBlur={(e) => {
                     formik.handleBlur(e);
-                    setFocused(prev => ({ ...prev, confirmPassword: false }));
+                    setFocused((prev) => ({ ...prev, confirmPassword: false }));
                   }}
                 />
                 <button
@@ -290,36 +210,28 @@ const Register = () => {
               )}
             </div>
 
-            {/* Submit */}
-            <motion.button
+            <button
               type="submit"
               disabled={isLoading}
               className={`w-full btn btn-primary mt-6 ${isLoading ? 'btn-loading' : ''}`}
-              whileHover={{ scale: isLoading ? 1 : 1.02 }}
-              whileTap={{ scale: 0.97 }}
             >
               {isLoading ? 'Creating account...' : 'Create Account'}
-            </motion.button>
+            </button>
           </form>
 
-          {/* Divider */}
           <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-border" />
             </div>
           </div>
 
-          {/* Sign In Link */}
           <p className="text-center text-sm text-ink-secondary font-dm">
             Already have an account?{' '}
-            <Link
-              to="/login"
-              className="text-accent font-medium hover:underline transition-colors"
-            >
+            <Link to="/login" className="text-accent font-medium hover:underline transition-colors">
               Sign in
             </Link>
           </p>
-        </motion.div>
+        </div>
       </div>
     </PageWrapper>
   );

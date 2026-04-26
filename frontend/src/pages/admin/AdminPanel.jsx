@@ -1,24 +1,31 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
+import { useEffect, useState } from 'react';
+import {
+  BadgeCheck,
+  CircleSlash,
+  ListChecks,
+  Loader2,
+  Shield,
+  ShieldAlert,
+  Trash2,
+  UserRoundCog,
+  Users,
+} from 'lucide-react';
+import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import PageWrapper from '../../components/PageWrapper';
-import api from '../../services/api';
-import { toast } from 'react-toastify';
+import { useAuth } from '../../context/AuthContext';
+import { adminAPI, getApiErrorMessage } from '../../services/api';
 
-function StatsCard({ label, value, color }) {
+const TABS = ['overview', 'users', 'listings'];
+
+function StatsCard({ label, value, icon: Icon, tone = 'text-accent' }) {
   return (
-    <div className="glass" style={{ padding: '20px 24px', textAlign: 'center' }}>
-      <div
-        style={{
-          fontSize: '2rem',
-          fontWeight: 700,
-          color: color || 'var(--accent)',
-          fontFamily: "'Syne'",
-        }}
-      >
-        {value}
+    <div className="glass rounded-2xl border border-white/20 p-5">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-dm text-ink-secondary">{label}</p>
+        <Icon size={16} className={tone} />
       </div>
-      <div style={{ fontSize: '0.8rem', color: 'var(--ink-secondary)', marginTop: '4px' }}>{label}</div>
+      <p className="mt-3 text-3xl font-syne font-bold text-ink-primary">{value}</p>
     </div>
   );
 }
@@ -32,212 +39,328 @@ export default function AdminPanel() {
   const [users, setUsers] = useState([]);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [busyKey, setBusyKey] = useState('');
 
   useEffect(() => {
-    if (user?.role !== 'admin') {
-      navigate('/', { replace: true });
+    if (user && user.role !== 'admin') {
+      navigate('/home', { replace: true });
     }
   }, [user, navigate]);
 
   useEffect(() => {
-    setLoading(true);
+    const loadActiveTab = async () => {
+      setLoading(true);
 
-    if (tab === 'overview') {
-      api
-        .get('/admin/stats')
-        .then(({ data }) => setStats(data.stats))
-        .catch(() => toast.error('Failed to load stats.'))
-        .finally(() => setLoading(false));
-    } else if (tab === 'users') {
-      api
-        .get('/admin/users')
-        .then(({ data }) => setUsers(data.users || []))
-        .catch(() => toast.error('Failed to load users.'))
-        .finally(() => setLoading(false));
-    } else {
-      api
-        .get('/admin/posts')
-        .then(({ data }) => setPosts(data.posts || []))
-        .catch(() => toast.error('Failed to load posts.'))
-        .finally(() => setLoading(false));
-    }
+      try {
+        if (tab === 'overview') {
+          const { data } = await adminAPI.getStats();
+          setStats(data?.stats || null);
+          return;
+        }
+
+        if (tab === 'users') {
+          const { data } = await adminAPI.getUsers();
+          setUsers(data?.users || []);
+          return;
+        }
+
+        const { data } = await adminAPI.getPosts();
+        setPosts(data?.posts || []);
+      } catch (error) {
+        toast.error(getApiErrorMessage(error, `Failed to load ${tab}`));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadActiveTab();
   }, [tab]);
 
-  const handleBan = async (userId) => {
+  const withBusy = async (key, action) => {
+    setBusyKey(key);
     try {
-      const { data } = await api.patch(`/admin/users/${userId}/ban`);
-      setUsers((prev) => prev.map((entry) => (entry._id === userId ? data.user : entry)));
-      toast.success(data.message);
-    } catch {
-      toast.error('Action failed.');
+      await action();
+    } finally {
+      setBusyKey('');
     }
   };
 
-  const handlePromote = async (userId) => {
-    try {
-      const { data } = await api.patch(`/admin/users/${userId}/promote`);
-      setUsers((prev) => prev.map((entry) => (entry._id === userId ? data.user : entry)));
-      toast.success(data.message);
-    } catch {
-      toast.error('Action failed.');
-    }
+  const handleBan = async (targetUserId) => {
+    await withBusy(`user-ban-${targetUserId}`, async () => {
+      try {
+        const { data } = await adminAPI.toggleBanUser(targetUserId);
+        setUsers((previous) =>
+          previous.map((entry) => (entry._id === targetUserId ? data.user : entry))
+        );
+        toast.success(data.message || 'User status updated.');
+      } catch (error) {
+        toast.error(getApiErrorMessage(error, 'Failed to update user status.'));
+      }
+    });
+  };
+
+  const handlePromote = async (targetUserId) => {
+    await withBusy(`user-role-${targetUserId}`, async () => {
+      try {
+        const { data } = await adminAPI.toggleAdminRole(targetUserId);
+        setUsers((previous) =>
+          previous.map((entry) => (entry._id === targetUserId ? data.user : entry))
+        );
+        toast.success(data.message || 'User role updated.');
+      } catch (error) {
+        toast.error(getApiErrorMessage(error, 'Failed to update user role.'));
+      }
+    });
   };
 
   const handleDeletePost = async (postId) => {
-    if (!window.confirm('Delete this post permanently?')) return;
-
-    try {
-      await api.delete(`/admin/posts/${postId}`);
-      setPosts((prev) => prev.filter((entry) => entry._id !== postId));
-      toast.success('Post deleted.');
-    } catch {
-      toast.error('Delete failed.');
+    if (!window.confirm('Delete this listing permanently?')) {
+      return;
     }
+
+    await withBusy(`post-delete-${postId}`, async () => {
+      try {
+        await adminAPI.deletePost(postId);
+        setPosts((previous) => previous.filter((entry) => entry._id !== postId));
+        toast.success('Listing deleted.');
+      } catch (error) {
+        toast.error(getApiErrorMessage(error, 'Failed to delete listing.'));
+      }
+    });
   };
 
-  const tabs = ['overview', 'users', 'posts'];
+  const handleTypeToggle = async (post) => {
+    const nextType = post.type === 'lost' ? 'found' : 'lost';
+
+    await withBusy(`post-type-${post._id}`, async () => {
+      try {
+        const { data } = await adminAPI.updatePostFlags(post._id, { type: nextType });
+        setPosts((previous) =>
+          previous.map((entry) => (entry._id === post._id ? data.post : entry))
+        );
+        toast.success(`Listing type updated to ${nextType}.`);
+      } catch (error) {
+        toast.error(getApiErrorMessage(error, 'Failed to update listing type.'));
+      }
+    });
+  };
+
+  const handleStatusToggle = async (post) => {
+    const nextStatus = post.status === 'open' ? 'resolved' : 'open';
+
+    await withBusy(`post-status-${post._id}`, async () => {
+      try {
+        const { data } = await adminAPI.updatePostFlags(post._id, { status: nextStatus });
+        setPosts((previous) =>
+          previous.map((entry) => (entry._id === post._id ? data.post : entry))
+        );
+        toast.success(`Listing marked as ${nextStatus}.`);
+      } catch (error) {
+        toast.error(getApiErrorMessage(error, 'Failed to update listing status.'));
+      }
+    });
+  };
 
   return (
-    <PageWrapper className="page-enter">
-      <div className="container-lg px-4 py-10">
-        <h1 className="text-3xl font-syne font-bold text-ink-primary mb-6">Admin Panel</h1>
+    <PageWrapper>
+      <div className="container-lg px-4 md:px-6 py-8 md:py-12">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-syne font-bold text-ink-primary">Admin Console</h1>
+            <p className="mt-1 text-sm font-dm text-ink-secondary">
+              Manage users, listings, and lost/found flags.
+            </p>
+          </div>
+        </div>
 
-        <div
-          style={{
-            display: 'inline-flex',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius-md)',
-            overflow: 'hidden',
-            marginBottom: '28px',
-          }}
-        >
-          {tabs.map((entry) => (
+        <div className="mb-6 inline-flex rounded-xl border border-white/15 bg-[#17132a]/80 p-1">
+          {TABS.map((entry) => (
             <button
               key={entry}
               type="button"
               onClick={() => setTab(entry)}
-              style={{
-                padding: '8px 24px',
-                background: tab === entry ? 'var(--accent)' : 'transparent',
-                color: tab === entry ? '#fff' : 'var(--ink-secondary)',
-                border: 'none',
-                cursor: 'pointer',
-                fontFamily: "'DM Sans'",
-                fontWeight: 500,
-                fontSize: '0.9rem',
-                textTransform: 'capitalize',
-                transition: 'background 150ms ease, color 150ms ease',
-              }}
+              className={`rounded-lg px-4 py-2 text-sm font-dm font-medium capitalize transition-colors ${
+                tab === entry ? 'bg-accent text-white' : 'text-ink-secondary hover:text-ink-primary'
+              }`}
             >
               {entry}
             </button>
           ))}
         </div>
 
-        {loading && <p style={{ color: 'var(--ink-muted)' }}>Loading...</p>}
+        {loading && (
+          <div className="glass rounded-xl border border-white/20 px-4 py-8 text-center text-sm font-dm text-ink-secondary">
+            <span className="inline-flex items-center gap-2">
+              <Loader2 size={16} className="animate-spin" />
+              <span>Loading {tab}...</span>
+            </span>
+          </div>
+        )}
 
         {!loading && tab === 'overview' && stats && (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-              gap: '16px',
-            }}
-          >
-            <StatsCard label="Total Users" value={stats.totalUsers} />
-            <StatsCard label="Total Posts" value={stats.totalPosts} />
-            <StatsCard label="Open Posts" value={stats.openPosts} color="var(--lost-color)" />
-            <StatsCard label="Resolved Posts" value={stats.resolvedPosts} color="var(--found-color)" />
-            <StatsCard label="Messages Sent" value={stats.totalMessages} color="var(--ink-secondary)" />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <StatsCard label="Users" value={stats.totalUsers} icon={Users} />
+            <StatsCard label="Listings" value={stats.totalPosts} icon={ListChecks} />
+            <StatsCard label="Open" value={stats.openPosts} icon={CircleSlash} tone="text-lost-color" />
+            <StatsCard label="Resolved" value={stats.resolvedPosts} icon={BadgeCheck} tone="text-found-color" />
+            <StatsCard label="Messages" value={stats.totalMessages} icon={Shield} tone="text-ink-secondary" />
           </div>
         )}
 
         {!loading && tab === 'users' && (
-          <div className="glass" style={{ overflow: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                  {['Name', 'Email', 'Flat', 'Role', 'Status', 'Actions'].map((heading) => (
-                    <th
-                      key={heading}
-                      style={{
-                        padding: '12px 16px',
-                        textAlign: 'left',
-                        color: 'var(--ink-secondary)',
-                        fontWeight: 500,
-                      }}
-                    >
-                      {heading}
-                    </th>
-                  ))}
+          <div className="glass overflow-x-auto rounded-xl border border-white/20">
+            <table className="min-w-full text-sm">
+              <thead className="bg-[#1b1630] text-left text-ink-secondary">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Name</th>
+                  <th className="px-4 py-3 font-medium">Email</th>
+                  <th className="px-4 py-3 font-medium">Role</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {users.map((entry) => (
-                  <tr key={entry._id} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '12px 16px', color: 'var(--ink-primary)' }}>{entry.name}</td>
-                    <td style={{ padding: '12px 16px', color: 'var(--ink-secondary)' }}>{entry.email}</td>
-                    <td style={{ padding: '12px 16px', color: 'var(--ink-secondary)' }}>
-                      {entry.flatNumber || '-'} {entry.block ? `· ${entry.block}` : ''}
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span
-                        style={{
-                          fontSize: '0.75rem',
-                          padding: '2px 8px',
-                          borderRadius: '20px',
-                          background: entry.role === 'admin' ? 'var(--accent-soft)' : 'var(--bg-surface)',
-                          color: entry.role === 'admin' ? 'var(--accent)' : 'var(--ink-secondary)',
-                          fontWeight: 500,
-                          textTransform: 'capitalize',
-                        }}
-                      >
-                        {entry.role}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span
-                        style={{
-                          fontSize: '0.75rem',
-                          padding: '2px 8px',
-                          borderRadius: '20px',
-                          background: entry.isBanned ? 'rgba(239,68,68,0.12)' : 'var(--bg-surface)',
-                          color: entry.isBanned ? 'var(--lost-color)' : 'var(--found-color)',
-                          fontWeight: 500,
-                        }}
-                      >
-                        {entry.isBanned ? 'Banned' : 'Active'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        <button
-                          onClick={() => handleBan(entry._id)}
-                          style={{
-                            fontSize: '0.78rem',
-                            padding: '4px 10px',
-                            border: '1px solid var(--border)',
-                            borderRadius: 'var(--radius-sm)',
-                            background: 'transparent',
-                            cursor: 'pointer',
-                            color: entry.isBanned ? 'var(--found-color)' : 'var(--lost-color)',
-                          }}
+                {users.map((entry) => {
+                  const isOwnRecord = String(entry._id) === String(user?._id);
+                  return (
+                    <tr key={entry._id} className="border-t border-white/10">
+                      <td className="px-4 py-3 font-dm text-ink-primary">
+                        <p>{entry.name}</p>
+                        <p className="text-xs text-ink-muted mt-0.5">
+                          {entry.flatNumber || '-'} {entry.block ? `• ${entry.block}` : ''}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3 font-dm text-ink-secondary">{entry.email}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs font-dm font-medium capitalize ${
+                            entry.role === 'admin'
+                              ? 'bg-accent-soft text-accent'
+                              : 'bg-[#231d3f] text-ink-secondary border border-white/12'
+                          }`}
                         >
-                          {entry.isBanned ? 'Unban' : 'Ban'}
+                          {entry.role}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs font-dm font-medium ${
+                            entry.isBanned
+                              ? 'bg-red-50 text-red-700 border border-red-100'
+                              : 'bg-green-50 text-green-700 border border-green-100'
+                          }`}
+                        >
+                          {entry.isBanned ? 'Banned' : 'Active'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            disabled={isOwnRecord || busyKey === `user-ban-${entry._id}`}
+                            onClick={() => handleBan(entry._id)}
+                            className="btn btn-secondary px-3 py-1.5 text-xs disabled:opacity-50"
+                          >
+                            <span className="inline-flex items-center gap-1">
+                              <ShieldAlert size={13} />
+                              <span>{entry.isBanned ? 'Unban' : 'Ban'}</span>
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isOwnRecord || busyKey === `user-role-${entry._id}`}
+                            onClick={() => handlePromote(entry._id)}
+                            className="btn btn-secondary px-3 py-1.5 text-xs disabled:opacity-50"
+                          >
+                            <span className="inline-flex items-center gap-1">
+                              <UserRoundCog size={13} />
+                              <span>{entry.role === 'admin' ? 'Demote' : 'Make Admin'}</span>
+                            </span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {users.length === 0 && (
+              <p className="px-4 py-8 text-center text-sm font-dm text-ink-muted">No users found.</p>
+            )}
+          </div>
+        )}
+
+        {!loading && tab === 'listings' && (
+          <div className="glass overflow-x-auto rounded-xl border border-white/20">
+            <table className="min-w-full text-sm">
+              <thead className="bg-[#1b1630] text-left text-ink-secondary">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Title</th>
+                  <th className="px-4 py-3 font-medium">Type</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 font-medium">Created By</th>
+                  <th className="px-4 py-3 font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {posts.map((entry) => (
+                  <tr key={entry._id} className="border-t border-white/10">
+                    <td className="px-4 py-3 font-dm text-ink-primary">
+                      <p className="max-w-[240px] truncate">{entry.title}</p>
+                      <p className="mt-0.5 text-xs text-ink-muted">{entry.category}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-dm font-semibold uppercase ${
+                          entry.type === 'lost'
+                            ? 'bg-red-50 text-red-700 border border-red-100'
+                            : 'bg-green-50 text-green-700 border border-green-100'
+                        }`}
+                      >
+                        {entry.type}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-dm font-medium capitalize ${
+                          entry.status === 'resolved'
+                            ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                            : 'bg-[#231d3f] text-ink-secondary border border-white/12'
+                        }`}
+                      >
+                        {entry.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 font-dm text-ink-secondary">{entry.createdBy?.name || '-'}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          disabled={busyKey === `post-type-${entry._id}`}
+                          onClick={() => handleTypeToggle(entry)}
+                          className="btn btn-secondary px-3 py-1.5 text-xs disabled:opacity-50"
+                        >
+                          {entry.type === 'lost' ? 'Set Found' : 'Set Lost'}
                         </button>
                         <button
-                          onClick={() => handlePromote(entry._id)}
-                          style={{
-                            fontSize: '0.78rem',
-                            padding: '4px 10px',
-                            border: '1px solid var(--border)',
-                            borderRadius: 'var(--radius-sm)',
-                            background: 'transparent',
-                            cursor: 'pointer',
-                            color: 'var(--accent)',
-                          }}
+                          type="button"
+                          disabled={busyKey === `post-status-${entry._id}`}
+                          onClick={() => handleStatusToggle(entry)}
+                          className="btn btn-secondary px-3 py-1.5 text-xs disabled:opacity-50"
                         >
-                          {entry.role === 'admin' ? 'Demote' : 'Make Admin'}
+                          {entry.status === 'open' ? 'Mark Resolved' : 'Mark Open'}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busyKey === `post-delete-${entry._id}`}
+                          onClick={() => handleDeletePost(entry._id)}
+                          className="btn btn-danger px-3 py-1.5 text-xs"
+                        >
+                          <span className="inline-flex items-center gap-1">
+                            <Trash2 size={13} />
+                            <span>Delete</span>
+                          </span>
                         </button>
                       </div>
                     </td>
@@ -246,93 +369,8 @@ export default function AdminPanel() {
               </tbody>
             </table>
 
-            {users.length === 0 && (
-              <p style={{ padding: '24px', textAlign: 'center', color: 'var(--ink-muted)' }}>No users found.</p>
-            )}
-          </div>
-        )}
-
-        {!loading && tab === 'posts' && (
-          <div className="glass" style={{ overflow: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                  {['Title', 'Type', 'Category', 'Status', 'By', 'Actions'].map((heading) => (
-                    <th
-                      key={heading}
-                      style={{
-                        padding: '12px 16px',
-                        textAlign: 'left',
-                        color: 'var(--ink-secondary)',
-                        fontWeight: 500,
-                      }}
-                    >
-                      {heading}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {posts.map((entry) => (
-                  <tr key={entry._id} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td
-                      style={{
-                        padding: '12px 16px',
-                        color: 'var(--ink-primary)',
-                        maxWidth: '200px',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {entry.title}
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span
-                        style={{
-                          fontSize: '0.75rem',
-                          padding: '2px 8px',
-                          borderRadius: '20px',
-                          background:
-                            entry.type === 'lost' ? 'rgba(239,68,68,0.12)' : 'rgba(16,185,129,0.12)',
-                          color: entry.type === 'lost' ? 'var(--lost-color)' : 'var(--found-color)',
-                          fontWeight: 600,
-                          textTransform: 'uppercase',
-                        }}
-                      >
-                        {entry.type}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 16px', color: 'var(--ink-secondary)' }}>{entry.category}</td>
-                    <td style={{ padding: '12px 16px', color: 'var(--ink-secondary)', textTransform: 'capitalize' }}>
-                      {entry.status}
-                    </td>
-                    <td style={{ padding: '12px 16px', color: 'var(--ink-secondary)' }}>
-                      {entry.createdBy?.name || '-'}
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <button
-                        onClick={() => handleDeletePost(entry._id)}
-                        style={{
-                          fontSize: '0.78rem',
-                          padding: '4px 10px',
-                          border: '1px solid var(--border)',
-                          borderRadius: 'var(--radius-sm)',
-                          background: 'transparent',
-                          cursor: 'pointer',
-                          color: 'var(--lost-color)',
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
             {posts.length === 0 && (
-              <p style={{ padding: '24px', textAlign: 'center', color: 'var(--ink-muted)' }}>No posts found.</p>
+              <p className="px-4 py-8 text-center text-sm font-dm text-ink-muted">No listings found.</p>
             )}
           </div>
         )}

@@ -42,4 +42,7 @@ const PostSchema = new mongoose.Schema({
   },
 });
 
+PostSchema.index({ createdAt: -1, type: 1, category: 1, status: 1 });
+PostSchema.index({ title: 'text', description: 'text', location: 'text' });
+
 module.exports = mongoose.model('Post', PostSchema);

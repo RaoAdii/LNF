@@ -6,6 +6,7 @@ const {
   getAllUsers,
   getAllPosts,
   deletePost,
+  updatePostFlags,
   toggleBanUser,
   toggleAdminRole,
 } = require('../controllers/adminController');
@@ -17,6 +18,7 @@ router.use(authMiddleware, adminMiddleware);
 router.get('/stats', getStats);
 router.get('/users', getAllUsers);
 router.get('/posts', getAllPosts);
+router.patch('/posts/:id', updatePostFlags);
 router.delete('/posts/:id', deletePost);
 router.patch('/users/:id/ban', toggleBanUser);
 router.patch('/users/:id/promote', toggleAdminRole);

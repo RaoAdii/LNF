@@ -15,7 +15,7 @@ export const SkeletonAvatar = () => (
 export const SkeletonPostList = ({ count = 3 }) => (
   <div className="space-y-4">
     {Array.from({ length: count }).map((_, i) => (
-      <div key={`skeleton-post-${i}`} className="flex gap-4 p-4 rounded-lg bg-white border border-[rgba(0,0,0,0.07)]">
+      <div key={`skeleton-post-${i}`} className="flex gap-4 p-4 rounded-lg bg-[#16122a] border border-white/15">
         <SkeletonAvatar />
         <div className="flex-1">
           <SkeletonText width="w-1/3" height="h-4" />
