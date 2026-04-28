@@ -134,14 +134,6 @@ ADMIN_TEST_EMAIL=admin@lnf.local
 ADMIN_TEST_PASSWORD=Admin@123456
 ADMIN_RESET_PASSWORD_ON_BOOT=false
 
-# Optional email service config (not required for current auth flow)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your-gmail@gmail.com
-SMTP_PASS=your-gmail-app-password
-FROM_EMAIL=your-gmail@gmail.com
-OTP_EXPIRES_MINUTES=10
-APP_NAME=LostHub
 ```
 
 Optional `frontend/.env`:

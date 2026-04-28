@@ -95,5 +95,5 @@ This document lists implemented behavior as of the current codebase.
 
 ## 10. Scope Notes
 
-- Cloudinary and SMTP utilities exist but are not part of the current primary auth flow.
+- Cloudinary config helper exists, but email/OTP verification is not implemented in this codebase.
 - No automated test suite is included yet in this repository.

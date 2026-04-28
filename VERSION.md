@@ -9,6 +9,12 @@ Semantic versioning:
 - MINOR: backward-compatible features
 - PATCH: fixes/docs/refactors
 
+## 1.6.2 - Docs Cleanup After Removing Email/OTP Utilities (2026-04-28)
+
+### Changed
+- Removed SMTP/OTP references from docs and file structure
+- Dropped unused component mention from frontend component list
+
 ## 1.6.1 - README Screenshot Gallery + Admin Docs Sync (2026-04-27)
 
 ### Added

@@ -43,8 +43,6 @@ This map documents the active repository layout and ownership boundaries.
 - `middleware/uploadMiddleware.js`
 
 ### Supporting Services/Utils
-- `services/emailService.js` - SMTP helper
-- `utils/otpHelper.js` - OTP helper utilities
 - `utils/seedAdminUser.js` - default admin seeding logic
 
 ### Runtime Storage
@@ -84,7 +82,6 @@ This map documents the active repository layout and ownership boundaries.
 - `src/components/BrandLogo.jsx`
 - `src/components/DotGrid.jsx`
 - `src/components/DotGrid.css`
-- `src/components/ColorBends.jsx`
 - `src/components/PostCard.jsx`
 - `src/components/SearchBar.jsx`
 - `src/components/MessageBox.jsx`
