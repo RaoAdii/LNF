@@ -291,7 +291,11 @@ export default function AdminPanel() {
                         <div className="grid grid-cols-[112px_132px_112px] gap-2">
                           <button
                             type="button"
-                            disabled={isOwnRecord || busyKey === `user-ban-${entry._id}`}
+                            disabled={
+                              isOwnRecord ||
+                              entry.isDefaultAdmin ||
+                              busyKey === `user-ban-${entry._id}`
+                            }
                             onClick={() => handleBan(entry._id)}
                             className={USER_ACTION_BUTTON_CLASS}
                           >
@@ -302,7 +306,11 @@ export default function AdminPanel() {
                           </button>
                           <button
                             type="button"
-                            disabled={isOwnRecord || busyKey === `user-role-${entry._id}`}
+                            disabled={
+                              isOwnRecord ||
+                              entry.isDefaultAdmin ||
+                              busyKey === `user-role-${entry._id}`
+                            }
                             onClick={() => handlePromote(entry._id)}
                             className={USER_ACTION_BUTTON_CLASS}
                           >
@@ -315,6 +323,7 @@ export default function AdminPanel() {
                             type="button"
                             disabled={
                               isOwnRecord ||
+                              entry.isDefaultAdmin ||
                               entry.role === 'admin' ||
                               busyKey === `user-delete-${entry._id}`
                             }

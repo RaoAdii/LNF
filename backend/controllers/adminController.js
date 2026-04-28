@@ -2,6 +2,11 @@ const User = require('../models/User');
 const Post = require('../models/Post');
 const Message = require('../models/Message');
 
+const DEFAULT_ADMIN_EMAIL = 'admin@lnf.local';
+const normalizeEmail = (value) => String(value || '').toLowerCase().trim();
+const resolveDefaultAdminEmail = () =>
+  normalizeEmail(process.env.ADMIN_TEST_EMAIL || DEFAULT_ADMIN_EMAIL);
+
 exports.getStats = async (_req, res, next) => {
   try {
     const [totalUsers, totalPosts, openPosts, resolvedPosts, totalMessages] = await Promise.all([
@@ -37,9 +42,15 @@ exports.getAllUsers = async (req, res, next) => {
       User.countDocuments(),
     ]);
 
+    const defaultAdminEmail = resolveDefaultAdminEmail();
+    const enrichedUsers = users.map((entry) => ({
+      ...entry,
+      isDefaultAdmin: normalizeEmail(entry.email) === defaultAdminEmail,
+    }));
+
     res.json({
       success: true,
-      users,
+      users: enrichedUsers,
       total,
       page,
       totalPages: Math.ceil(total / limit),
@@ -144,10 +155,33 @@ exports.updatePostFlags = async (req, res, next) => {
 
 exports.toggleBanUser = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id).select('-password');
+    const [user, actingUser] = await Promise.all([
+      User.findById(req.params.id).select('-password'),
+      User.findById(req.user?.id).select('email role').lean(),
+    ]);
+
+    const defaultAdminEmail = resolveDefaultAdminEmail();
+    const isTargetDefaultAdmin = normalizeEmail(user?.email) === defaultAdminEmail;
+    const isActingDefaultAdmin = normalizeEmail(actingUser?.email) === defaultAdminEmail;
+
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found.' });
     }
+
+    if (isTargetDefaultAdmin && !isActingDefaultAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only the default admin can manage default admin ban status.',
+      });
+    }
+
+    if (isTargetDefaultAdmin) {
+      return res.status(400).json({
+        success: false,
+        message: 'Default admin account cannot be banned.',
+      });
+    }
+
     if (user.role === 'admin') {
       return res.status(400).json({ success: false, message: 'Cannot ban another admin.' });
     }
@@ -167,9 +201,31 @@ exports.toggleBanUser = async (req, res, next) => {
 
 exports.toggleAdminRole = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id).select('-password');
+    const [user, actingUser] = await Promise.all([
+      User.findById(req.params.id).select('-password'),
+      User.findById(req.user?.id).select('email role').lean(),
+    ]);
+
+    const defaultAdminEmail = resolveDefaultAdminEmail();
+    const isTargetDefaultAdmin = normalizeEmail(user?.email) === defaultAdminEmail;
+    const isActingDefaultAdmin = normalizeEmail(actingUser?.email) === defaultAdminEmail;
+
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    if (isTargetDefaultAdmin && !isActingDefaultAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only the default admin can manage the default admin role.',
+      });
+    }
+
+    if (isTargetDefaultAdmin) {
+      return res.status(400).json({
+        success: false,
+        message: 'Default admin role cannot be changed.',
+      });
     }
 
     user.role = user.role === 'admin' ? 'user' : 'admin';
